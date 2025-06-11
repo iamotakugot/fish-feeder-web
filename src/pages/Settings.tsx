@@ -98,42 +98,28 @@ const Settings = () => {
     try {
       console.log("🔄 Loading configuration data...");
       
-      // Try to get configuration, but handle offline gracefully
-      try {
-        const response = await fetch('http://localhost:5000/api/control/config');
-        const data = await response.json();
-        
-        if (data && data.config) {
-          setConfig({
-            timing: {
-              sensor_read_interval: data.config.sensor_read_interval || 5,
-              firebase_sync_interval: data.config.firebase_sync_interval || 10,
-              websocket_broadcast_interval: data.config.websocket_broadcast_interval || 3,
-            },
-            feeding: {
-              auto_feed_enabled: data.config.auto_feed_enabled || false,
-              auto_feed_schedule: data.config.auto_feed_schedule || [],
-            }
-          });
-          showMessage("success", "⚙️ โหลดการตั้งค่าสำเร็จ");
-        }
-      } catch (fetchError) {
-        // API unavailable, use default config
+      // Use API client instead of direct fetch
+      const data = await apiClient.getConfig();
+      
+      if (data && (data as any).config) {
+        const configData = (data as any).config;
         setConfig({
           timing: {
-            sensor_read_interval: 5,
-            firebase_sync_interval: 10,
-            websocket_broadcast_interval: 3,
+            sensor_read_interval: configData.sensor_read_interval || 5,
+            firebase_sync_interval: configData.firebase_sync_interval || 10,
+            websocket_broadcast_interval: configData.websocket_broadcast_interval || 3,
           },
           feeding: {
-            auto_feed_enabled: false,
-            auto_feed_schedule: [],
+            auto_feed_enabled: configData.auto_feed_enabled || false,
+            auto_feed_schedule: configData.auto_feed_schedule || [],
           }
         });
-        showMessage("info", "⚙️ ใช้การตั้งค่าเริ่มต้น (ออฟไลน์)");
+        showMessage("success", "⚙️ โหลดการตั้งค่าสำเร็จ");
+      } else {
+        throw new Error("No config data received");
       }
     } catch (error) {
-      console.error("Config load failed:", error);
+      console.log("Config load failed, using defaults:", error);
       // Fallback to default config
       setConfig({
         timing: {
@@ -146,7 +132,7 @@ const Settings = () => {
           auto_feed_schedule: [],
         }
       });
-      showMessage("error", "❌ ใช้การตั้งค่าเริ่มต้น");
+      showMessage("info", "⚙️ ใช้การตั้งค่าเริ่มต้น (ออฟไลน์)");
     } finally {
       setLoading(prev => ({ ...prev, config: false }));
     }

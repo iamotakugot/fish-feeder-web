@@ -201,6 +201,43 @@ const withTimeout = <T>(promise: Promise<T>, timeout: number): Promise<T> => {
 };
 
 // Retry helper with exponential backoff and offline mode handling
+// Silent fetch wrapper to reduce console noise
+const silentFetch = async (url: string, options: RequestInit): Promise<Response> => {
+  // Store original console methods
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  
+  // Temporarily suppress console errors for fetch operations
+  const suppressConsole = () => {
+    console.error = () => {};
+    console.warn = () => {};
+  };
+  
+  // Restore console methods
+  const restoreConsole = () => {
+    console.error = originalError;
+    console.warn = originalWarn;
+  };
+  
+  try {
+    suppressConsole();
+    return await fetch(url, options);
+  } catch (error) {
+    // Check for connection errors and handle silently
+    if (error instanceof Error && 
+        (error.message.includes('ERR_CONNECTION_REFUSED') || 
+         error.message.includes('Failed to fetch') ||
+         error.message.includes('net::ERR_') ||
+         error.name === 'TypeError')) {
+      // Throw a clean error without the browser console noise
+      throw new Error('CONNECTION_FAILED');
+    }
+    throw error;
+  } finally {
+    restoreConsole();
+  }
+};
+
 const withRetry = async <T>(
   fn: () => Promise<T>,
   maxRetries: number = API_CONFIG.MAX_RETRIES,
@@ -215,7 +252,8 @@ const withRetry = async <T>(
       lastError = error as Error;
       
       // Handle connection errors immediately without retrying
-      if (lastError.message.includes('ERR_CONNECTION_REFUSED') || 
+      if (lastError.message.includes('CONNECTION_FAILED') ||
+          lastError.message.includes('ERR_CONNECTION_REFUSED') || 
           lastError.message.includes('Failed to fetch') ||
           lastError.message.includes('fetch is not defined')) {
         throw lastError; // Let the main error handler catch this
@@ -362,7 +400,7 @@ export class FishFeederApiClient {
 
     try {
       const response = await withTimeout(
-        withRetry(() => fetch(url, fetchOptions)),
+        withRetry(() => silentFetch(url, fetchOptions)),
         timeout,
       );
 
@@ -389,11 +427,12 @@ export class FishFeederApiClient {
         }
         
         // Handle connection errors gracefully in production
-        if (error.message.includes('ERR_CONNECTION_REFUSED') || 
+        if (error.message.includes('CONNECTION_FAILED') ||
+            error.message.includes('ERR_CONNECTION_REFUSED') || 
             error.message.includes('Request timeout') ||
             error.message.includes('Failed to fetch') ||
             error.message.includes('fetch is not defined')) {
-          console.warn(`🔄 API connection failed for ${endpoint}, returning offline response`);
+          console.log(`🔄 API connection failed for ${endpoint}, returning offline response`);
           return this.getMockResponse(endpoint);
         }
         
@@ -537,6 +576,16 @@ export class FishFeederApiClient {
       API_CONFIG.ENDPOINTS.SYNC,
       { method: API_CONFIG.METHODS.POST },
       false,
+      API_CONFIG.TIMEOUT,
+    );
+  }
+
+  // Get system configuration
+  async getConfig(): Promise<ApiResponse> {
+    return this.enhancedFetch(
+      API_CONFIG.ENDPOINTS.CONTROL_CONFIG,
+      { method: API_CONFIG.METHODS.GET },
+      true, // Cache config data
       API_CONFIG.TIMEOUT,
     );
   }
