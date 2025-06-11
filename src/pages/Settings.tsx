@@ -482,11 +482,10 @@ const Settings = () => {
 
           <div className="space-y-6">
             <div>
-              <label htmlFor="sensor-read-interval" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label id="sensor-read-interval-label" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Sensor Read Interval: {config.timing.sensor_read_interval}s
               </label>
               <Slider
-                id="sensor-read-interval"
                 name="sensorReadInterval"
                 size="sm"
                 step={1}
@@ -498,17 +497,16 @@ const Settings = () => {
                   timing: { ...prev.timing, sensor_read_interval: Array.isArray(value) ? value[0] : value }
                 }))}
                 className="max-w-md"
+                aria-labelledby="sensor-read-interval-label"
                 aria-label={`Sensor read interval: ${config.timing.sensor_read_interval} seconds`}
-                aria-labelledby={undefined}
               />
             </div>
 
             <div>
-              <label htmlFor="firebase-sync-interval" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label id="firebase-sync-interval-label" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Firebase Sync Interval: {config.timing.firebase_sync_interval}s
               </label>
               <Slider
-                id="firebase-sync-interval"
                 name="firebaseSyncInterval"
                 size="sm"
                 step={1}
@@ -520,17 +518,16 @@ const Settings = () => {
                   timing: { ...prev.timing, firebase_sync_interval: Array.isArray(value) ? value[0] : value }
                 }))}
                 className="max-w-md"
+                aria-labelledby="firebase-sync-interval-label"
                 aria-label={`Firebase sync interval: ${config.timing.firebase_sync_interval} seconds`}
-                aria-labelledby={undefined}
               />
             </div>
 
             <div>
-              <label htmlFor="websocket-broadcast-interval" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label id="websocket-broadcast-interval-label" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 WebSocket Broadcast: {config.timing.websocket_broadcast_interval}s
               </label>
               <Slider
-                id="websocket-broadcast-interval"
                 name="websocketBroadcastInterval"
                 size="sm"
                 step={1}
@@ -542,8 +539,8 @@ const Settings = () => {
                   timing: { ...prev.timing, websocket_broadcast_interval: Array.isArray(value) ? value[0] : value }
                 }))}
                 className="max-w-md"
+                aria-labelledby="websocket-broadcast-interval-label"
                 aria-label={`WebSocket broadcast interval: ${config.timing.websocket_broadcast_interval} seconds`}
-                aria-labelledby={undefined}
               />
             </div>
           </div>
@@ -559,7 +556,7 @@ const Settings = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <label htmlFor="auto-feed-switch" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label id="auto-feed-switch-label" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Enable Auto Feed
                 </label>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -567,7 +564,6 @@ const Settings = () => {
                 </p>
               </div>
               <Switch
-                id="auto-feed-switch"
                 name="autoFeedEnabled"
                 isSelected={config.feeding.auto_feed_enabled}
                 onValueChange={(checked) =>
@@ -576,8 +572,8 @@ const Settings = () => {
                     feeding: { ...prev.feeding, auto_feed_enabled: checked }
                   }))
                 }
+                aria-labelledby="auto-feed-switch-label"
                 aria-label="Enable automatic feeding schedule"
-                aria-labelledby={undefined}
               />
             </div>
 

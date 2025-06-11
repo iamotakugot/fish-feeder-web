@@ -698,17 +698,16 @@ const FeedControl = () => {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center text-green-500 dark:text-green-400">
               <BsPlus className="mr-3 text-xl" />
-              <label htmlFor="automatic-feeding-switch" className="text-xl font-semibold cursor-pointer">
+              <label id="automatic-feeding-switch-label" className="text-xl font-semibold cursor-pointer">
                 Auto Schedule
               </label>
             </div>
             <Switch
-              id="automatic-feeding-switch"
               name="automaticFeeding"
               isSelected={automaticFeeding}
               onValueChange={setAutomaticFeeding}
+              aria-labelledby="automatic-feeding-switch-label"
               aria-label="Enable automatic feeding schedule"
-              aria-labelledby={undefined}
             />
           </div>
 
