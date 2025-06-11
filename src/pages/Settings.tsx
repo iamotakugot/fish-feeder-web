@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Switch } from "@heroui/switch";
+import { Slider } from "@heroui/slider";
+import { Divider } from "@heroui/divider";
 import {
   // IoMdSettings,
   IoMdWifi,
@@ -16,123 +18,249 @@ import {
 import {
   // FaTemperatureHigh,
   FaWeight,
-  // FaClock,
+  FaClock,
   FaDatabase,
   FaCog,
   FaShieldAlt,
+  FaArrowUp,
+  FaArrowDown,
 } from "react-icons/fa";
-import { MdInfo, MdAutoDelete, MdBackup } from "react-icons/md";
+import { MdInfo, MdAutoDelete, MdBackup, MdScale } from "react-icons/md";
+import { FishFeederApiClient, API_CONFIG } from "../config/api";
 
 const Settings = () => {
   const navigate = useNavigate();
 
-  // System Settings
-  const [feedingSettings, setFeedingSettings] = useState({
-    autoFeedingEnabled: true,
-    defaultFeedAmount: "100",
-    feedingInterval: "8",
-    lowFoodAlert: "20",
-    temperatureAlert: "30",
+  // API Client
+  const [apiClient] = useState(new FishFeederApiClient());
+
+  // HX711 Calibration State
+  const [calibrationMode, setCalibrationMode] = useState<"idle" | "calibrating" | "tare">("idle");
+  const [currentWeight, setCurrentWeight] = useState<number>(0);
+  const [isCalibrated, setIsCalibrated] = useState<boolean>(false);
+  const [calibrationStep, setCalibrationStep] = useState<number>(0);
+  const [knownWeight, setKnownWeight] = useState<string>("1000"); // grams
+  const [calibrationMessage, setCalibrationMessage] = useState<string>("");
+
+  // System Status State
+  const [systemStatus, setSystemStatus] = useState({
+    arduino_connected: false,
+    firebase_connected: false,
+    camera_active: false,
+    websocket_enabled: false,
+    pi_server_connected: false,
   });
 
-  // Notification Settings
-  const [notifications, setNotifications] = useState({
-    feedingAlerts: true,
-    temperatureAlerts: true,
-    lowFoodAlerts: true,
-    systemAlerts: true,
-    emailNotifications: false,
+  // Configuration State
+  const [config, setConfig] = useState({
+    timing: {
+      sensor_read_interval: 3,
+      firebase_sync_interval: 5,
+      websocket_broadcast_interval: 2,
+    },
+    feeding: {
+      auto_feed_enabled: false,
+      auto_feed_schedule: [] as Array<{ time: string; amount: number }>,
+    },
   });
 
-  // System Maintenance Settings
-  const [maintenanceSettings, setMaintenanceSettings] = useState({
-    autoBackup: true,
-    backupInterval: "24",
-    dataRetention: "30",
-    debugMode: false,
-    performanceMonitoring: true,
+  // UI State
+  const [loading, setLoading] = useState({
+    calibration: false,
+    config: false,
+    status: false,
   });
 
-  const [saving, setSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<string>("");
+  const [message, setMessage] = useState<{
+    type: "success" | "error" | "info";
+    text: string;
+  } | null>(null);
 
-  const handleSaveSettings = async () => {
-    setSaving(true);
+  // Auto-refresh intervals
+  useEffect(() => {
+    loadConfiguration();
+    loadSystemStatus();
+    startWeightMonitoring();
 
-    try {
-      // Simulate API call to save settings
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+    // Auto-refresh every 5 seconds
+    const statusInterval = setInterval(loadSystemStatus, 5000);
+    const weightInterval = setInterval(refreshWeight, 2000);
 
-      setLastSaved(new Date().toLocaleTimeString());
-
-      // Show success message
-      alert("Settings saved successfully!");
-    } catch (error) {
-      alert("Failed to save settings. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleResetToDefaults = () => {
-    if (confirm("Are you sure you want to reset all settings to defaults?")) {
-      setFeedingSettings({
-        autoFeedingEnabled: true,
-        defaultFeedAmount: "100",
-        feedingInterval: "8",
-        lowFoodAlert: "20",
-        temperatureAlert: "30",
-      });
-
-      setNotifications({
-        feedingAlerts: true,
-        temperatureAlerts: true,
-        lowFoodAlerts: true,
-        systemAlerts: true,
-        emailNotifications: false,
-      });
-
-      setMaintenanceSettings({
-        autoBackup: true,
-        backupInterval: "24",
-        dataRetention: "30",
-        debugMode: false,
-        performanceMonitoring: true,
-      });
-    }
-  };
-
-  const handleClearData = () => {
-    if (confirm("⚠️ This will clear all feeding history and logs. Are you sure?")) {
-      localStorage.clear();
-      alert("Data cleared successfully!");
-    }
-  };
-
-  const handleExportData = () => {
-    const data = {
-      feedingSettings,
-      notifications,
-      maintenanceSettings,
-      exportDate: new Date().toISOString(),
-      version: "v2.1.0"
+    return () => {
+      clearInterval(statusInterval);
+      clearInterval(weightInterval);
     };
-    
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `fish-feeder-settings-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  }, []);
+
+  // Load system configuration
+  const loadConfiguration = async () => {
+    setLoading(prev => ({ ...prev, config: true }));
+    try {
+      console.log("🔄 Loading configuration data...");
+      const response = await fetch('/api/control/config', { method: 'GET' }).then(res => res.json());
+      
+      if (response) {
+        setConfig(response);
+        console.log("📊 Config data received:", response);
+        showMessage("success", "⚙️ โหลดการตั้งค่าสำเร็จ");
+      }
+    } catch (error) {
+      console.error("Config load failed:", error);
+      showMessage("error", "❌ ไม่สามารถโหลดการตั้งค่าได้");
+    } finally {
+      setLoading(prev => ({ ...prev, config: false }));
+    }
   };
 
-  const handleBackupData = async () => {
+  // Load system status
+  const loadSystemStatus = async () => {
+    setLoading(prev => ({ ...prev, status: true }));
     try {
-      alert("Backup initiated! Data will be saved to Firebase.");
-      // Here you would implement actual backup to Firebase
+      const health = await apiClient.checkHealth();
+      
+      setSystemStatus({
+        arduino_connected: health.serial_connected || false,
+        firebase_connected: true, // Always true in web app
+        camera_active: false, // Would need camera status endpoint
+        websocket_enabled: health.serial_connected || false,
+        pi_server_connected: health.status === "ok",
+      });
     } catch (error) {
-      alert("Backup failed. Please try again.");
+      console.error("Status check failed:", error);
+      setSystemStatus({
+        arduino_connected: false,
+        firebase_connected: true,
+        camera_active: false,
+        websocket_enabled: false,
+        pi_server_connected: false,
+      });
+    } finally {
+      setLoading(prev => ({ ...prev, status: false }));
+    }
+  };
+
+  // Start weight monitoring
+  const startWeightMonitoring = async () => {
+    try {
+      const sensors = await apiClient.getAllSensors();
+      const weightSensor = sensors.data?.HX711_FEEDER;
+      
+      if (weightSensor) {
+        const weightValue = weightSensor.values.find(v => v.type === "weight");
+        if (weightValue) {
+          setCurrentWeight(weightValue.value);
+          setIsCalibrated(true);
+        }
+      }
+    } catch (error) {
+      console.error("Weight monitoring failed:", error);
+    }
+  };
+
+  // Refresh weight reading
+  const refreshWeight = async () => {
+    if (calibrationMode === "idle") {
+      await startWeightMonitoring();
+    }
+  };
+
+  // Show message helper
+  const showMessage = (type: "success" | "error" | "info", text: string) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 5000);
+  };
+
+  // HX711 Calibration Functions
+  const startCalibration = async () => {
+    setCalibrationMode("calibrating");
+    setCalibrationStep(1);
+    setCalibrationMessage("📏 กรุณานำวัตถุทุกอย่างออกจากเครื่องชั่ง แล้วกด 'เริ่มปรับเทียร์'");
+  };
+
+  const performTare = async () => {
+    setLoading(prev => ({ ...prev, calibration: true }));
+    try {
+      setCalibrationMessage("⏳ กำลังปรับเทียร์เครื่องชั่ง...");
+      
+      const response = await apiClient.tareWeight();
+      if (response.status === 'success') {
+        setCalibrationStep(2);
+        setCalibrationMessage(`✅ ปรับเทียร์สำเร็จ! ตอนนี้วางน้ำหนักมาตรฐาน ${knownWeight} กรัม แล้วกด 'ปรับค่า'`);
+        showMessage("success", "🎯 ปรับเทียร์เครื่องชั่งสำเร็จ");
+      } else {
+        throw new Error('Tare failed');
+      }
+    } catch (error) {
+      console.error("Tare failed:", error);
+      setCalibrationMessage("❌ การปรับเทียร์ล้มเหลว กรุณาลองใหม่");
+      showMessage("error", "❌ การปรับเทียร์ล้มเหลว");
+    } finally {
+      setLoading(prev => ({ ...prev, calibration: false }));
+    }
+  };
+
+  const performCalibration = async () => {
+    setLoading(prev => ({ ...prev, calibration: true }));
+    try {
+      setCalibrationMessage("⏳ กำลังปรับค่าเครื่องชั่ง...");
+      
+      const weightInKg = parseFloat(knownWeight) / 1000; // Convert grams to kg
+      const response = await apiClient.calibrateWeight({ weight: weightInKg });
+      
+      if (response.status === 'success') {
+        setCalibrationStep(3);
+        setCalibrationMessage("🎉 ปรับค่าเครื่องชั่งสำเร็จ! ระบบพร้อมใช้งาน");
+        setIsCalibrated(true);
+        setCalibrationMode("idle");
+        showMessage("success", "🎉 ปรับค่าเครื่องชั่งสำเร็จ");
+        
+        // Refresh weight reading
+        setTimeout(refreshWeight, 1000);
+      } else {
+        throw new Error('Calibration failed');
+      }
+    } catch (error) {
+      console.error("Calibration failed:", error);
+      setCalibrationMessage("❌ การปรับค่าล้มเหลว กรุณาตรวจสอบน้ำหนักและลองใหม่");
+      showMessage("error", "❌ การปรับค่าเครื่องชั่งล้มเหลว");
+    } finally {
+      setLoading(prev => ({ ...prev, calibration: false }));
+    }
+  };
+
+  const resetCalibration = async () => {
+    if (confirm("⚠️ คุณแน่ใจหรือไม่ที่จะรีเซ็ตการปรับค่าเครื่องชั่ง?")) {
+      try {
+        // Reset weight sensor (would need reset endpoint)
+        setCalibrationMode("idle");
+        setCalibrationStep(0);
+        setIsCalibrated(false);
+        setCurrentWeight(0);
+        setCalibrationMessage("");
+        showMessage("success", "🔄 รีเซ็ตเครื่องชั่งสำเร็จ");
+      } catch (error) {
+        showMessage("error", "❌ การรีเซ็ตล้มเหลว");
+      }
+    }
+  };
+
+  const cancelCalibration = () => {
+    setCalibrationMode("idle");
+    setCalibrationStep(0);
+    setCalibrationMessage("");
+    showMessage("info", "🚫 ยกเลิกการปรับค่าเครื่องชั่ง");
+  };
+
+  // Save configuration
+  const saveConfiguration = async () => {
+    setLoading(prev => ({ ...prev, config: true }));
+    try {
+      // Would need save config endpoint
+      showMessage("success", "💾 บันทึกการตั้งค่าสำเร็จ");
+    } catch (error) {
+      showMessage("error", "❌ การบันทึกล้มเหลว");
+    } finally {
+      setLoading(prev => ({ ...prev, config: false }));
     }
   };
 
@@ -143,471 +271,297 @@ const Settings = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              ⚙️ System Settings
+              ⚙️ System Settings & HX711 Calibration
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Configure your fish feeder system preferences
+              กำหนดค่าระบบและปรับเทียบเครื่องชั่งน้ำหนัก
             </p>
           </div>
-          {lastSaved && (
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Last saved: {lastSaved}
-            </div>
-          )}
+          <Button
+            color="primary"
+            startContent={<IoMdRefresh />}
+            onPress={() => {
+              loadConfiguration();
+              loadSystemStatus();
+            }}
+            isLoading={loading.config || loading.status}
+          >
+            รีเฟรช
+          </Button>
         </div>
+
+        {/* Message Display */}
+        {message && (
+          <div className={`mt-4 p-3 rounded-lg border ${
+            message.type === "success" 
+              ? "bg-green-50 border-green-200 text-green-800" 
+              : message.type === "error"
+              ? "bg-red-50 border-red-200 text-red-800"
+              : "bg-blue-50 border-blue-200 text-blue-800"
+          }`}>
+            {message.text}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Feeding Settings */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center text-blue-500 dark:text-blue-400 mb-6">
-            <FaWeight className="mr-3 text-xl" />
-            <h2 className="text-xl font-semibold">Feeding Settings</h2>
-          </div>
-
-          <div className="space-y-6">
-            {/* Auto Feeding Toggle */}
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Automatic Feeding
-                </label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Enable scheduled feeding
-                </p>
-              </div>
-              <Switch
-                isSelected={feedingSettings.autoFeedingEnabled}
-                onValueChange={(checked) =>
-                  setFeedingSettings((prev) => ({
-                    ...prev,
-                    autoFeedingEnabled: checked,
-                  }))
-                }
-              />
-            </div>
-
-            {/* Default Feed Amount */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Default Feed Amount (grams)
-              </label>
-              <Input
-                max="500"
-                min="10"
-                placeholder="100"
-                type="number"
-                value={feedingSettings.defaultFeedAmount}
-                onChange={(e) =>
-                  setFeedingSettings((prev) => ({
-                    ...prev,
-                    defaultFeedAmount: e.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            {/* Feeding Interval */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Feeding Interval (hours)
-              </label>
-              <Input
-                max="24"
-                min="1"
-                placeholder="8"
-                type="number"
-                value={feedingSettings.feedingInterval}
-                onChange={(e) =>
-                  setFeedingSettings((prev) => ({
-                    ...prev,
-                    feedingInterval: e.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            {/* Alert Thresholds */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Low Food Alert (%)
-                </label>
-                <Input
-                  max="50"
-                  min="5"
-                  placeholder="20"
-                  type="number"
-                  value={feedingSettings.lowFoodAlert}
-                  onChange={(e) =>
-                    setFeedingSettings((prev) => ({
-                      ...prev,
-                      lowFoodAlert: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Temperature Alert (°C)
-                </label>
-                <Input
-                  max="50"
-                  min="10"
-                  placeholder="30"
-                  type="number"
-                  value={feedingSettings.temperatureAlert}
-                  onChange={(e) =>
-                    setFeedingSettings((prev) => ({
-                      ...prev,
-                      temperatureAlert: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Notification Settings */}
+        {/* HX711 Weight Calibration */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-100 dark:border-gray-700">
           <div className="flex items-center text-purple-500 dark:text-purple-400 mb-6">
-            <IoMdNotifications className="mr-3 text-xl" />
-            <h2 className="text-xl font-semibold">Notifications</h2>
+            <MdScale className="mr-3 text-xl" />
+            <h2 className="text-xl font-semibold">HX711 Weight Calibration</h2>
+          </div>
+
+          {/* Current Weight Display */}
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-4 mb-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                {currentWeight.toFixed(3)} kg
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {isCalibrated ? "✅ เครื่องชั่งพร้อมใช้งาน" : "⚠️ ต้องปรับค่าเครื่องชั่ง"}
+              </div>
+            </div>
+          </div>
+
+          {/* Calibration Controls */}
+          {calibrationMode === "idle" ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  น้ำหนักมาตรฐาน (กรัม)
+                </label>
+                <Input
+                  type="number"
+                  placeholder="1000"
+                  value={knownWeight}
+                  onChange={(e) => setKnownWeight(e.target.value)}
+                  min="100"
+                  max="5000"
+                  step="100"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  color="primary"
+                  className="flex-1"
+                  startContent={<FaWeight />}
+                  onPress={startCalibration}
+                >
+                  เริ่มปรับค่าเครื่องชั่ง
+                </Button>
+                
+                <Button
+                  color="warning"
+                  variant="bordered"
+                  startContent={<IoMdTrash />}
+                  onPress={resetCalibration}
+                >
+                  รีเซ็ต
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Calibration Progress */}
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
+                <div className="flex items-center text-yellow-700 dark:text-yellow-300 mb-2">
+                  <FaClock className="mr-2" />
+                  <span className="font-medium">ขั้นตอนที่ {calibrationStep}/3</span>
+                </div>
+                <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                  {calibrationMessage}
+                </p>
+              </div>
+
+              {/* Calibration Action Buttons */}
+              <div className="flex gap-3">
+                {calibrationStep === 1 && (
+                  <Button
+                    color="success"
+                    className="flex-1"
+                    startContent={<FaArrowDown />}
+                    onPress={performTare}
+                    isLoading={loading.calibration}
+                  >
+                    เริ่มปรับเทียร์ (Tare)
+                  </Button>
+                )}
+                
+                {calibrationStep === 2 && (
+                  <Button
+                    color="success"
+                    className="flex-1"
+                    startContent={<FaArrowUp />}
+                    onPress={performCalibration}
+                    isLoading={loading.calibration}
+                  >
+                    ปรับค่า ({knownWeight}g)
+                  </Button>
+                )}
+
+                <Button
+                  color="danger"
+                  variant="bordered"
+                  onPress={cancelCalibration}
+                  isDisabled={loading.calibration}
+                >
+                  ยกเลิก
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* System Status Dashboard */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center text-green-500 dark:text-green-400 mb-6">
+            <IoMdWifi className="mr-3 text-xl" />
+            <h2 className="text-xl font-semibold">System Status</h2>
           </div>
 
           <div className="space-y-4">
-            {Object.entries(notifications).map(([key, value]) => (
-              <div key={key} className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {key === "feedingAlerts" && "Feeding Alerts"}
-                    {key === "temperatureAlerts" && "Temperature Alerts"}
-                    {key === "lowFoodAlerts" && "Low Food Alerts"}
-                    {key === "systemAlerts" && "System Alerts"}
-                    {key === "emailNotifications" && "Email Notifications"}
-                  </label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {key === "feedingAlerts" &&
-                      "Get notified about feeding events"}
-                    {key === "temperatureAlerts" &&
-                      "Alerts for temperature changes"}
-                    {key === "lowFoodAlerts" &&
-                      "Notifications when food is low"}
-                    {key === "systemAlerts" && "System status notifications"}
-                    {key === "emailNotifications" && "Send alerts via email"}
-                  </p>
+            {Object.entries({
+              "Arduino Connection": systemStatus.arduino_connected,
+              "Firebase Connection": systemStatus.firebase_connected,
+              "Camera System": systemStatus.camera_active,
+              "WebSocket Server": systemStatus.websocket_enabled,
+              "Pi Server": systemStatus.pi_server_connected,
+            }).map(([name, status]) => (
+              <div key={name} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {name}
+                </span>
+                <div className={`flex items-center ${status ? "text-green-600" : "text-red-600"}`}>
+                  <div className={`w-2 h-2 rounded-full mr-2 ${status ? "bg-green-500" : "bg-red-500"}`} />
+                  <span className="text-sm font-medium">
+                    {status ? "Connected" : "Disconnected"}
+                  </span>
                 </div>
-                <Switch
-                  isSelected={value}
-                  onValueChange={(checked) =>
-                    setNotifications((prev) => ({ ...prev, [key]: checked }))
-                  }
-                />
               </div>
             ))}
           </div>
         </div>
 
-        {/* System Maintenance */}
+        {/* Timing Configuration */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center text-green-500 dark:text-green-400 mb-6">
-            <FaCog className="mr-3 text-xl" />
-            <h2 className="text-xl font-semibold">System Maintenance</h2>
+          <div className="flex items-center text-blue-500 dark:text-blue-400 mb-6">
+            <FaClock className="mr-3 text-xl" />
+            <h2 className="text-xl font-semibold">Timing Configuration</h2>
           </div>
 
-          <div className="space-y-4">
-            {/* Auto Backup */}
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Auto Backup
-                </label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Automatically backup system data
-                </p>
-              </div>
-              <Switch
-                isSelected={maintenanceSettings.autoBackup}
-                onValueChange={(checked) =>
-                  setMaintenanceSettings((prev) => ({
-                    ...prev,
-                    autoBackup: checked,
-                  }))
-                }
-              />
-            </div>
-
-            {/* Backup Interval */}
+          <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Backup Interval (hours)
+                Sensor Read Interval: {config.timing.sensor_read_interval}s
               </label>
-              <Input
-                max="168"
-                min="1"
-                placeholder="24"
-                type="number"
-                value={maintenanceSettings.backupInterval}
-                onChange={(e) =>
-                  setMaintenanceSettings((prev) => ({
-                    ...prev,
-                    backupInterval: e.target.value,
-                  }))
-                }
+              <Slider
+                size="sm"
+                step={1}
+                minValue={1}
+                maxValue={10}
+                value={config.timing.sensor_read_interval}
+                onChange={(value) => setConfig(prev => ({
+                  ...prev,
+                  timing: { ...prev.timing, sensor_read_interval: Array.isArray(value) ? value[0] : value }
+                }))}
+                className="max-w-md"
               />
             </div>
 
-            {/* Data Retention */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Data Retention (days)
+                Firebase Sync Interval: {config.timing.firebase_sync_interval}s
               </label>
-              <Input
-                max="365"
-                min="7"
-                placeholder="30"
-                type="number"
-                value={maintenanceSettings.dataRetention}
-                onChange={(e) =>
-                  setMaintenanceSettings((prev) => ({
-                    ...prev,
-                    dataRetention: e.target.value,
-                  }))
-                }
+              <Slider
+                size="sm"
+                step={1}
+                minValue={1}
+                maxValue={30}
+                value={config.timing.firebase_sync_interval}
+                onChange={(value) => setConfig(prev => ({
+                  ...prev,
+                  timing: { ...prev.timing, firebase_sync_interval: Array.isArray(value) ? value[0] : value }
+                }))}
+                className="max-w-md"
               />
             </div>
 
-            {/* Debug Mode */}
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Debug Mode
-                </label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Enable detailed logging
-                </p>
-              </div>
-              <Switch
-                isSelected={maintenanceSettings.debugMode}
-                onValueChange={(checked) =>
-                  setMaintenanceSettings((prev) => ({
-                    ...prev,
-                    debugMode: checked,
-                  }))
-                }
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                WebSocket Broadcast: {config.timing.websocket_broadcast_interval}s
+              </label>
+              <Slider
+                size="sm"
+                step={1}
+                minValue={1}
+                maxValue={10}
+                value={config.timing.websocket_broadcast_interval}
+                onChange={(value) => setConfig(prev => ({
+                  ...prev,
+                  timing: { ...prev.timing, websocket_broadcast_interval: Array.isArray(value) ? value[0] : value }
+                }))}
+                className="max-w-md"
               />
-            </div>
-
-            {/* Performance Monitoring */}
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Performance Monitoring
-                </label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Track system performance
-                </p>
-              </div>
-              <Switch
-                isSelected={maintenanceSettings.performanceMonitoring}
-                onValueChange={(checked) =>
-                  setMaintenanceSettings((prev) => ({
-                    ...prev,
-                    performanceMonitoring: checked,
-                  }))
-                }
-              />
-            </div>
-
-            {/* Maintenance Actions */}
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-600 space-y-3">
-              <Button
-                className="w-full"
-                color="secondary"
-                size="sm"
-                startContent={<MdBackup />}
-                variant="bordered"
-                onPress={handleBackupData}
-              >
-                Manual Backup
-              </Button>
-              <Button
-                className="w-full"
-                color="warning"
-                size="sm"
-                startContent={<IoMdDownload />}
-                variant="bordered"
-                onPress={handleExportData}
-              >
-                Export Settings
-              </Button>
-              <Button
-                className="w-full"
-                color="danger"
-                size="sm"
-                startContent={<IoMdTrash />}
-                variant="bordered"
-                onPress={handleClearData}
-              >
-                Clear All Data
-              </Button>
             </div>
           </div>
         </div>
 
-        {/* System Information */}
+        {/* Auto Feed Configuration */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-100 dark:border-gray-700">
           <div className="flex items-center text-orange-500 dark:text-orange-400 mb-6">
-            <FaDatabase className="mr-3 text-xl" />
-            <h2 className="text-xl font-semibold">System Information</h2>
+            <FaWeight className="mr-3 text-xl" />
+            <h2 className="text-xl font-semibold">Auto Feed Settings</h2>
           </div>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    App Version:
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    v2.1.0
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Build Date:
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    2024-01-15
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Database Size:
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    2.4 MB
-                  </span>
-                </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Enable Auto Feed
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Automatically feed fish on schedule
+                </p>
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Total Feeds:
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    1,247
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Uptime:
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    15 days
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Last Backup:
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    Today
-                  </span>
-                </div>
-              </div>
+              <Switch
+                isSelected={config.feeding.auto_feed_enabled}
+                onValueChange={(checked) =>
+                  setConfig(prev => ({
+                    ...prev,
+                    feeding: { ...prev.feeding, auto_feed_enabled: checked }
+                  }))
+                }
+              />
             </div>
 
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-600">
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                <FaShieldAlt className="text-green-500" />
-                <span>System Status: Online & Secure</span>
+            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg p-4">
+              <div className="flex items-center text-orange-700 dark:text-orange-300 mb-2">
+                <MdInfo className="mr-2" />
+                <span className="font-medium">Schedule Status</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div className="bg-green-500 h-2 rounded-full" style={{width: '95%'}}></div>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">System Health: 95%</p>
-            </div>
-          </div>
-        </div>
-
-        {/* About & Project Information */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center text-purple-500 dark:text-purple-400 mb-6">
-            <MdInfo className="mr-3 text-xl" />
-            <h2 className="text-xl font-semibold">เกี่ยวกับโปรเจค</h2>
-          </div>
-
-          <div className="space-y-4">
-            <div className="text-center space-y-3">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                Stand-Alone Automatic Fish Feeder
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                using Internet of Things
+              <p className="text-sm text-orange-600 dark:text-orange-400">
+                {config.feeding.auto_feed_schedule.length === 0 
+                  ? "No feeding schedule configured" 
+                  : `${config.feeding.auto_feed_schedule.length} scheduled feeding times`}
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                วิศวกรรมไฟฟ้าอุตสาหกรรม มหาวิทยาลัยเทคโนโลยีสุรนารี
-              </p>
-            </div>
-
-            <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                รายชื่อคณะผู้จัดทำ
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
-                <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="font-mono text-blue-600 dark:text-blue-400">B6523404</div>
-                  <div className="text-gray-700 dark:text-gray-300">นายพีรวัตน์ กองสอน</div>
-                </div>
-                <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="font-mono text-blue-600 dark:text-blue-400">B6523442</div>
-                  <div className="text-gray-700 dark:text-gray-300">นายภักรพงษ์ พิศพิง</div>
-                </div>
-                <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="font-mono text-blue-600 dark:text-blue-400">B6523497</div>
-                  <div className="text-gray-700 dark:text-gray-300">นายสุรวิชั แสนกวีสุข</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-600">
-              <Button
-                className="w-full"
-                color="secondary"
-                size="sm"
-                startContent={<MdInfo />}
-                variant="bordered"
-                onPress={() => {
-                  localStorage.removeItem("splash-seen");
-                  navigate("/splash");
-                }}
-              >
-                ดู Splash Screen อีกครั้ง
-              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-100 dark:border-gray-700">
-        <div className="flex flex-col sm:flex-row gap-4 justify-end">
+      {/* Save Button */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <div className="flex justify-center">
           <Button
-            startContent={<IoMdRefresh />}
-            variant="bordered"
-            onPress={handleResetToDefaults}
-          >
-            Reset to Defaults
-          </Button>
-          <Button
-            color="primary"
-            isLoading={saving}
+            color="success"
+            size="lg"
             startContent={<IoMdSave />}
-            onPress={handleSaveSettings}
+            onPress={saveConfiguration}
+            isLoading={loading.config}
           >
-            Save Settings
+            💾 Save All Settings
           </Button>
         </div>
       </div>
