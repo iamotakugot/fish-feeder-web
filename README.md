@@ -1,305 +1,195 @@
-# 🐟 Stand-Alone Automatic Fish Feeder (IoT System)
+# 🐟 Fish Feeder Web Application (v2.1.1)
 
-![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
-![Firebase](https://img.shields.io/badge/firebase-hosting-orange.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+**รหัสโปรเจค:** B65IEE02  
+**สาขาวิชา:** วิศวกรรมไฟฟ้าอุตสาหการ  
+**มหาวิทยาลัย:** มหาวิทยาลัยเทคโนโลยีสุรนารี
 
-## 🌟 ภาพรวมโปรเจค
+## 🎯 Project Overview
 
-**Stand-Alone Automatic Fish Feeder** เป็นระบบป้อนอาหารปลาอัตโนมัติที่ใช้เทคโนโลยี Internet of Things (IoT) พัฒนาโดยนักศึกษาวิศวกรรมไฟฟ้าอุตสาหกรรม มหาวิทยาลัยเทคโนโลยีสุรนารี
+ระบบป้อนอาหารปลาอัตโนมัติแบบครบวงจร พร้อมระบบตรวจสอบและควบคุมผ่าน Web Application แบบ Real-time
 
-### 🎯 วัตถุประสงค์
-- พัฒนาระบบป้อนอาหารปลาที่ทำงานอัตโนมัติ
-- ควบคุมและตรวจสอบผ่านเว็บแอปพลิเคชัน
-- บูรณาการระบบ IoT เพื่อการจัดการระยะไกล
-- ประยุกต์ใช้เทคโนโลยีสมัยใหม่ในการเลี้ยงปลา
+### ✨ Features หลัก
 
-## 🚀 Live Demo
+- **🔄 Real-time Dashboard**: อัพเดตข้อมูลอัตโนมัติทุก 5 วินาทีโดยไม่ต้องรีเฟรชหน้า
+- **📱 Responsive UI**: รองรับการใช้งานบนมือถือและแท็บเล็ต
+- **🌡️ Smart Cooling Fan**: ควบคุมพัดลมระบายความร้อนแบบอัตโนมัติตามอุณหภูมิ
+- **📊 Data Visualization**: แสดงผลข้อมูลแบบกราฟ Real-time
+- **🔋 Power Management**: ตรวจสอบสถานะพลังงานและแบตเตอรี่
+- **🎛️ Motor PWM Control**: ควบคุมมอเตอร์แบบละเอียดด้วย PWM
+- **🔥 Firebase Integration**: บันทึกข้อมูลแบบ Cloud หรือใช้ Local API เป็น fallback
 
-**เข้าใช้งานได้ที่: [https://fish-feeder-test-1.web.app](https://fish-feeder-test-1.web.app)**
+## 🛠️ Tech Stack
 
-## ✨ คุณสมบัติหลัก
+- **Frontend**: React 18 + TypeScript + Tailwind CSS
+- **Build Tool**: Vite
+- **Deployment**: Firebase Hosting
+- **Database**: Firebase Realtime Database
+- **Icons**: Lucide React
+- **Animations**: Framer Motion
 
-### 🎛️ การควบคุมระบบ
-- **Dashboard แบบ Real-time**: แสดงสถานะปัจจุบันของระบบ
-- **Manual Feed Control**: ป้อนอาหารด้วยตนเองผ่านเว็บ
-- **Scheduled Feeding**: ตั้งเวลาป้อนอาหารอัตโนมัติ
-- **Motor PWM Control**: ควบคุมความเร็วมอเตอร์และปริมาณอาหาร
-
-### 🌡️ ระบบควบคุมอุณหภูมิ
-- **Temperature Monitoring**: ตรวจสอบอุณหภูมิด้วย DHT22 (PIN 48)
-- **Auto Fan Control**: ควบคุมพัดลมอัตโนมัติผ่าน Relay (PIN 52)
-- **Smart Threshold**: ตั้งค่าอุณหภูมิและ Hysteresis
-- **Real-time Sync**: ซิงค์ข้อมูลทุก 5 วินาที
-
-### 📊 ระบบจัดการข้อมูล
-- **Firebase Integration**: เก็บข้อมูลบน Firebase Realtime Database
-- **Analytics & Reports**: วิเคราะห์ข้อมูลการป้อนอาหาร
-- **Export Data**: ส่งออกข้อมูลเป็นไฟล์ JSON
-- **Auto Backup**: สำรองข้อมูลอัตโนมัติ
-
-### 📱 User Experience
-- **Responsive Design**: ใช้งานได้ทั้ง Desktop และ Mobile
-- **Dark/Light Theme**: เปลี่ยนธีมตามต้องการ
-- **Splash Screen**: หน้าต้อนรับแบบมืออาชีพ
-- **Modern UI**: ใช้ HeroUI และ Tailwind CSS
-
-## 🏗️ สถาปัตยกรรมระบบ
+## 📂 Project Structure
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Web App       │────▶│   Firebase      │────▶│   Pi Server     │
-│   (Frontend)    │     │   (Database)    │     │   (Backend)     │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                                                          │
-                                                          ▼
-                                                ┌─────────────────┐
-                                                │   Arduino       │
-                                                │   (Hardware)    │
-                                                └─────────────────┘
+fish-feeder-web/
+├── src/
+│   ├── components/        # React Components
+│   ├── pages/             # Page Components
+│   ├── hooks/             # Custom Hooks
+│   ├── utils/             # Utility Functions
+│   └── firebase/          # Firebase Configuration
+├── public/                # Static Assets
+├── PI_SERVER_AI_INSTRUCTION.md  # AI Instructions for Pi Server
+└── README.md
 ```
 
-### 🔧 เทคโนโลยีที่ใช้
+## 🚀 Quick Start
 
-#### Frontend (Web Application)
-- **React 18** + **TypeScript**
-- **Vite** (Build Tool)
-- **Tailwind CSS** + **HeroUI** (UI Framework)
-- **Firebase SDK** (Database Integration)
-- **Framer Motion** (Animations)
-- **React Router** (Navigation)
+### Prerequisites
+- Node.js 18+
+- npm หรือ yarn
 
-#### Backend & Hardware
-- **Python** (Pi Server)
-- **Firebase Realtime Database**
-- **Arduino** (Hardware Control)
-- **DHT22** Temperature Sensor
-- **Servo Motors** & **Relay Modules**
+### Installation
 
-#### DevOps & Deployment
-- **Firebase Hosting**
-- **Git** Version Control
-- **NPM** Package Management
-
-## 📦 การติดตั้งและใช้งาน
-
-### 📋 ความต้องการระบบ
-- Node.js 16+ 
-- NPM หรือ Yarn
-- Git
-- Firebase CLI (สำหรับ deploy)
-
-### 🛠️ ขั้นตอนการติดตั้ง
-
-1. **Clone Repository**
 ```bash
-git clone https://github.com/your-username/fish-feeder-web.git
+# Clone repository
+git clone <repository-url>
 cd fish-feeder-web
-```
 
-2. **ติดตั้ง Dependencies**
-```bash
+# Install dependencies
 npm install
-# หรือ
-yarn install
-```
 
-3. **ตั้งค่า Firebase**
-```bash
-# ติดตั้ง Firebase CLI
-npm install -g firebase-tools
-
-# Login Firebase
-firebase login
-
-# เริ่มต้นโปรเจค
-firebase init
-```
-
-4. **รัน Development Server**
-```bash
+# Start development server
 npm run dev
 ```
 
-5. **Build สำหรับ Production**
+### Build & Deploy
+
 ```bash
+# Build for production
 npm run build
+
+# Deploy to Firebase
+npm run deploy
 ```
 
-6. **Deploy ไปยัง Firebase**
-```bash
-firebase deploy
+## 🔧 Configuration
+
+### Firebase Setup
+1. สร้าง Firebase project ใหม่
+2. เปิดใช้งาน Realtime Database
+3. Copy config ไปใส่ใน `src/firebase/config.ts`
+
+### Pi Server Integration
+อ่านไฟล์ `PI_SERVER_AI_INSTRUCTION.md` สำหรับรายละเอียดการตั้งค่า Pi Server
+
+## 📋 API Endpoints (Pi Server)
+
+```
+GET    /health                    - Health check
+GET    /api/sensors              - Get all sensor data
+POST   /api/control/feed         - Feed control
+POST   /api/control/direct       - Direct command
+POST   /api/control/fan-auto     - Fan auto control
+GET    /api/sensors/history      - Get historical data
 ```
 
 ## 🎮 การใช้งาน
 
-### 1. 🏠 Dashboard
-- ดูสถานะปัจจุบันของระบบ
-- แสดงกราฟข้อมูลแบบ Real-time
-- ตรวจสอบการเชื่อมต่อ
+### Dashboard หลัก
+- ตรวจสอบสถานะเซ็นเซอร์แบบ Real-time
+- ควบคุมการป้อนอาหารด้วย Preset หรือ Custom
+- ตั้งค่าระบบพัดลมอัตโนมัติ
 
-### 2. 🍽️ Feed Control
-- ป้อนอาหารด้วยตนเอง
-- ตั้งเวลาป้อนอาหารอัตโนมัติ
-- ปรับปริมาณอาหาร
+### Temperature Control
+- ตรวจสอบอุณหภูมิจากเซ็นเซอร์หลายตัว
+- กราฟแสดงแนวโน้มอุณหภูมิ
+- ควบคุมพัดลมระบายความร้อน
 
-### 3. 🌡️ Temperature Control
-- ตรวจสอบอุณหภูมิห้องควบคุม
-- ตั้งค่าอุณหภูมิเปิด/ปิดพัดลม
-- โหมดอัตโนมัติ/ด้วยตนเอง
+### Motor Control
+- ควบคุม Auger และ Blower
+- ตั้งค่า PWM Speed
+- ควบคุม Actuator Up/Down
 
-### 4. ⚙️ Motor & PWM Settings
-- ควบคุมมอเตอร์ Auger
-- ปรับค่า PWM Speed
-- ควบคุมพัดลมระบายอากาศ
+## 🧠 AI Pi Server Integration
 
-### 5. 🔧 Settings
-- ตั้งค่าระบบทั่วไป
-- การแจ้งเตือน
-- บำรุงรักษาระบบ
-- ส่งออกข้อมูล
+ไฟล์ `PI_SERVER_AI_INSTRUCTION.md` มีคำแนะนำสำหรับ AI ในการอัพเดต Pi Server ให้ทำงานร่วมกับ Web App ได้ รวมถึง:
 
-## 📁 โครงสร้างโปรเจค
+- **Sensor Data API**: รูปแบบการส่งข้อมูลเซ็นเซอร์
+- **Feed Control API**: ระบบป้อนอาหารแบบ Custom และ Preset
+- **Cooling Fan Auto Mode**: ระบบพัดลมอัตโนมัติ
+- **Historical Data**: การจัดเก็บและแสดงผลข้อมูลย้อนหลัง
+- **Error Handling**: การจัดการข้อผิดพลาด
 
-```
-fish-feeder-web/
-├── public/                 # Static files
-├── src/
-│   ├── components/         # React Components
-│   │   ├── Layout.tsx
-│   │   ├── Sidebar.tsx
-│   │   └── theme-switch.tsx
-│   ├── pages/             # Page Components
-│   │   ├── Dashboard.tsx
-│   │   ├── FeedControl.tsx
-│   │   ├── FanTempControl.tsx
-│   │   ├── MotorPWM.tsx
-│   │   ├── Settings.tsx
-│   │   └── SplashScreen.tsx
-│   ├── utils/             # Utility Functions
-│   │   ├── api.ts
-│   │   └── firebaseSensorUtils.ts
-│   ├── App.tsx            # Main App Component
-│   └── main.tsx           # Entry Point
-├── tailwind.config.js     # Tailwind Configuration
-├── vite.config.ts         # Vite Configuration
-├── firebase.json          # Firebase Configuration
-└── package.json           # Dependencies
-```
+## 📊 Sensor Data Structure
 
-## 🔌 API Documentation
-
-### Pi Server Endpoints
-
-#### 🍽️ Feed Control
-```bash
-# Manual Feed
-POST /feed
+```json
 {
-  "amount": 100,
-  "duration": 3
-}
-
-# Get Feed Status
-GET /feed/status
-
-# Schedule Feed
-POST /feed/schedule
-{
-  "time": "08:00",
-  "amount": 50,
-  "enabled": true
+  "DHT22_SYSTEM": { "temperature": 32.1, "humidity": 58.5 },
+  "DHT22_FEEDER": { "temperature": 25.3, "humidity": 64.2 },
+  "HX711_FEEDER": { "weight": 1384.2, "unit": "grams" },
+  "DS18B20_WATER_TEMP": { "temperature": 27.3 },
+  "SOIL_MOISTURE": { "humidity": 44.2, "percentage": 44 },
+  "SOLAR_CURRENT": { "current": 0.3, "voltage": 12.1 },
+  "LOAD_VOLTAGE": { "voltage": 12.1 },
+  "BATTERY_STATUS": { "voltage": 12.5, "percentage": 82 }
 }
 ```
 
-#### 🌡️ Temperature Control
-```bash
-# Get Temperature
-GET /temperature
+## 🎛️ Control Commands
 
-# Set Fan Control
-POST /fan/control
+### Feed Control
+```json
 {
-  "mode": "auto",
-  "threshold": 30,
-  "hysteresis": 2
-}
-
-# Manual Fan Control
-POST /fan/manual
-{
-  "state": "on" | "off"
+  "action": "custom",
+  "preset": "medium",
+  "actuator_up": 3.5,
+  "actuator_down": 3.0,
+  "auger_on": 2.0,
+  "blower_on": 5.0
 }
 ```
 
-#### ⚙️ Motor Control
-```bash
-# Auger Control
-POST /motor/auger
-{
-  "action": "forward" | "reverse" | "stop",
-  "speed": 255,
-  "duration": 5
-}
+### Direct Commands
+- `U:X.X` - Actuator Up (seconds)
+- `D:X.X` - Actuator Down (seconds)
+- `G:0/1/2` - Auger Control
+- `B:0/1` - Blower Control
+- `R:0/1/2` - Relay Control
+- `SPD:XXX` - PWM Speed (0-255)
 
-# Blower Control
-POST /motor/blower
-{
-  "speed": 128,
-  "duration": 10
-}
-```
+## 📈 Version History
 
-## 📈 เวอร์ชัน 2.1.0 (ปัจจุบัน)
+### v2.1.1 (Current)
+- ✅ แก้ไข Splash Screen - ปุ่มเข้าสู่ระบบไม่บังกับ Copyright
+- ✅ เพิ่ม Project Code "B65IEE02" ให้เด่นชัด
+- ✅ Real-time Dashboard อัพเดตอัตโนมัติทุก 5 วินาที
+- ✅ ระบบแจ้งเตือนแบบ Live บนหน้าเว็บ
+- ✅ AI Instruction สำหรับ Pi Server Integration
 
-### ✅ Enhanced Features
-- **Professional Splash Screen**: หน้าต้อนรับแบบมืออาชีพพร้อม animation
-- **Improved Tab Menu**: ปรับปรุง UI ให้ responsive ทั้ง mobile และ desktop
-- **Auto Fan Control System**: ระบบควบคุมพัดลมอัตโนมัติด้วย DHT22
-- **Firebase Real-time Sync**: ซิงค์ข้อมูลแบบ real-time ทุก 5 วินาที
-- **Enhanced Settings Page**: ปรับปรุงหน้า Settings ให้มีประโยชน์มากขึ้น
-- **Data Export/Backup**: ระบบส่งออกและสำรองข้อมูล
-- **Performance Optimization**: เพิ่มประสิทธิภาพการทำงาน
+### v2.1.0
+- ✅ Enhanced Motor PWM Control
+- ✅ Real-time Firebase Dashboard
+- ✅ Automatic Fan Control System
+- ✅ Splash Screen with Loading Animation
+- ✅ Responsive UI Improvements
 
-### 🔧 System Improvements
-- Inter และ Roboto fonts สำหรับความสวยงาม
-- Responsive design ที่ทำงานได้ดีทั้ง mobile และ desktop
-- ปรับปรุง navigation และ user experience
-- เพิ่มระบบ maintenance และ monitoring
+## 🔗 Links
 
-## 👥 ทีมพัฒนา
+- **Live Demo**: https://fish-feeder-test-1.web.app
+- **Repository**: [GitHub Repository]
+- **Documentation**: [API Documentation]
 
-### 🎓 รายชื่อคณะผู้จัดทำ
+## 🏫 Team Credits
 
-| รหัสนักศึกษา | ชื่อ-นามสกุล | บทบาท |
-|-------------|------------|-------|
-| **B6523404** | นายพีรวัตน์ กองสอน | Lead Developer |
-| **B6523442** | นายภักรพงษ์ พิศพิง | Hardware Engineer |
-| **B6523497** | นายสุรวิชั แสนกวีสุข | System Analyst |
+**สาขาวิชาวิศวกรรมไฟฟ้าอุตสาหการ**  
+มหาวิทยาลัยเทคโนโลยีสุรนารี
 
-### 🏫 สถาบัน
-**วิศวกรรมไฟฟ้าอุตสาหกรรม**  
-**สำนักวิชาวิศวกรรมศาสตร์**  
-**มหาวิทยาลัยเทคโนโลยีสุรนารี**
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 📞 ติดต่อ
-
-- **Web Demo**: [https://fish-feeder-test-1.web.app](https://fish-feeder-test-1.web.app)
-- **University**: [มหาวิทยาลัยเทคโนโลยีสุรนารี](https://www.sut.ac.th)
+**รายชื่อผู้จัดทำ:**
+- นายกิตวัฒน์ กลมลอก (B6523404)
+- นายกิตติพงษ์ ปัตตัง (B6523442)
+- นายสิรวิท แสนกรวย (B6523497)
 
 ---
 
-## 🙏 ขอบคุณ
-
-ขอบคุณทุกท่านที่ให้การสนับสนุนโปรเจคนี้ และขอบคุณ Open Source Community ที่ทำให้โปรเจคนี้เป็นไปได้
-
-**Made with ❤️ by SUT Industrial Electrical Engineering Students**
-
----
-
-*© 2024 Suranaree University of Technology. All rights reserved.* 
+© 2024 Suranaree University of Technology  
+Industrial Electrical Engineering Department 

@@ -197,7 +197,7 @@ const SplashScreen = () => {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
-            className="mb-8"
+            className="mb-12"
           >
             <motion.button
               whileHover={{ 
@@ -233,7 +233,7 @@ const SplashScreen = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 3 }}
-          className="absolute bottom-4 md:bottom-8 left-1/2 transform -translate-x-1/2 text-center"
+          className="absolute bottom-4 md:bottom-8 left-1/2 transform -translate-x-1/2 text-center z-0"
         >
           <p className="text-xs md:text-sm text-gray-300 font-medium">
             © 2024 Suranaree University of Technology
