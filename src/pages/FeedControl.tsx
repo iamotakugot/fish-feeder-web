@@ -513,12 +513,15 @@ const FeedControl = () => {
                   Amount (grams)
                 </label>
                 <Input
+                  id="custom-feed-amount"
+                  name="feedAmount"
                   max="2000"
                   min="10"
                   placeholder="Enter amount (e.g. 1500 for 1.5kg)"
                   type="number"
                   value={feedAmount}
                   onChange={(e) => setFeedAmount(e.target.value)}
+                  aria-label="Custom feed amount in grams"
                 />
                 {feedAmount && parseInt(feedAmount) > 0 && (
                   <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -565,6 +568,8 @@ const FeedControl = () => {
                   Actuator Up (s)
                 </label>
                 <Input
+                  id="actuator-up-input"
+                  name="actuatorUp"
                   type="number"
                   size="sm"
                   min="1"
@@ -572,6 +577,7 @@ const FeedControl = () => {
                   value={actuatorUp}
                   onChange={(e) => handleTimingChange('actuator_up', e.target.value)}
                   placeholder="3"
+                  aria-label="Actuator up duration in seconds"
                 />
               </div>
               <div>
@@ -686,8 +692,11 @@ const FeedControl = () => {
               <h2 className="text-xl font-semibold">Auto Schedule</h2>
             </div>
             <Switch
+              id="automatic-feeding-switch"
+              name="automaticFeeding"
               isSelected={automaticFeeding}
               onValueChange={setAutomaticFeeding}
+              aria-label="Enable automatic feeding schedule"
             />
           </div>
 

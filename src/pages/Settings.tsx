@@ -358,6 +358,8 @@ const Settings = () => {
                   น้ำหนักมาตรฐาน (กรัม)
                 </label>
                 <Input
+                  id="known-weight-input"
+                  name="knownWeight"
                   type="number"
                   placeholder="1000"
                   value={knownWeight}
@@ -365,6 +367,7 @@ const Settings = () => {
                   min="100"
                   max="5000"
                   step="100"
+                  aria-label="น้ำหนักมาตรฐานสำหรับปรับค่าเครื่องชั่ง"
                 />
               </div>
 
@@ -483,6 +486,8 @@ const Settings = () => {
                 Sensor Read Interval: {config.timing.sensor_read_interval}s
               </label>
               <Slider
+                id="sensor-read-interval"
+                name="sensorReadInterval"
                 size="sm"
                 step={1}
                 minValue={1}
@@ -493,6 +498,7 @@ const Settings = () => {
                   timing: { ...prev.timing, sensor_read_interval: Array.isArray(value) ? value[0] : value }
                 }))}
                 className="max-w-md"
+                aria-label={`Sensor read interval: ${config.timing.sensor_read_interval} seconds`}
               />
             </div>
 
@@ -501,6 +507,8 @@ const Settings = () => {
                 Firebase Sync Interval: {config.timing.firebase_sync_interval}s
               </label>
               <Slider
+                id="firebase-sync-interval"
+                name="firebaseSyncInterval"
                 size="sm"
                 step={1}
                 minValue={1}
@@ -511,6 +519,7 @@ const Settings = () => {
                   timing: { ...prev.timing, firebase_sync_interval: Array.isArray(value) ? value[0] : value }
                 }))}
                 className="max-w-md"
+                aria-label={`Firebase sync interval: ${config.timing.firebase_sync_interval} seconds`}
               />
             </div>
 
@@ -519,6 +528,8 @@ const Settings = () => {
                 WebSocket Broadcast: {config.timing.websocket_broadcast_interval}s
               </label>
               <Slider
+                id="websocket-broadcast-interval"
+                name="websocketBroadcastInterval"
                 size="sm"
                 step={1}
                 minValue={1}
@@ -529,6 +540,7 @@ const Settings = () => {
                   timing: { ...prev.timing, websocket_broadcast_interval: Array.isArray(value) ? value[0] : value }
                 }))}
                 className="max-w-md"
+                aria-label={`WebSocket broadcast interval: ${config.timing.websocket_broadcast_interval} seconds`}
               />
             </div>
           </div>
@@ -552,6 +564,8 @@ const Settings = () => {
                 </p>
               </div>
               <Switch
+                id="auto-feed-switch"
+                name="autoFeedEnabled"
                 isSelected={config.feeding.auto_feed_enabled}
                 onValueChange={(checked) =>
                   setConfig(prev => ({
@@ -559,6 +573,7 @@ const Settings = () => {
                     feeding: { ...prev.feeding, auto_feed_enabled: checked }
                   }))
                 }
+                aria-label="Enable automatic feeding schedule"
               />
             </div>
 

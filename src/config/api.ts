@@ -230,18 +230,42 @@ const resetConnectionState = () => {
 // Global error suppression for network errors (run once on module load)
 (function setupGlobalErrorSuppression() {
   const originalConsoleError = console.error;
+  const originalConsoleWarn = console.warn;
+  const originalConsoleLog = console.log;
   
   // Override console.error to filter out network errors
   console.error = (...args) => {
     const message = args.join(' ');
     if (message.includes('net::ERR_CONNECTION_REFUSED') ||
         message.includes('ERR_CONNECTION_REFUSED') ||
-        message.includes('GET http://localhost:5000') && message.includes('net::ERR_')) {
+        message.includes('Failed to fetch') ||
+        (message.includes('GET http://localhost:5000') && message.includes('net::ERR_')) ||
+        (message.includes('localhost:5000') && message.includes('ERR_'))) {
       // Suppress these specific network errors
       return;
     }
     // Call original console.error for other messages
     originalConsoleError.apply(console, args);
+  };
+
+  // Override console.warn to filter out network warnings
+  console.warn = (...args) => {
+    const message = args.join(' ');
+    if (message.includes('net::ERR_CONNECTION_REFUSED') ||
+        message.includes('localhost:5000') ||
+        message.includes('Failed to fetch')) {
+      return;
+    }
+    originalConsoleWarn.apply(console, args);
+  };
+
+  // Override console.log to filter out network logs
+  console.log = (...args) => {
+    const message = args.join(' ');
+    if (message.includes('GET http://localhost:5000') && message.includes('net::ERR_')) {
+      return;
+    }
+    originalConsoleLog.apply(console, args);
   };
 })();
 
