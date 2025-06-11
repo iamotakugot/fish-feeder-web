@@ -201,79 +201,179 @@ const withTimeout = <T>(promise: Promise<T>, timeout: number): Promise<T> => {
 };
 
 // Retry helper with exponential backoff and offline mode handling
-// Connection state tracking to prevent repeated failed requests
+// Aggressive connection state tracking to prevent repeated failed requests
 let connectionState = 'unknown'; // 'online', 'offline', 'unknown'
 let lastConnectionCheck = 0;
-const CONNECTION_CHECK_INTERVAL = 10000; // 10 seconds
+let consecutiveFailures = 0;
+const CONNECTION_CHECK_INTERVAL = 30000; // 30 seconds for aggressive caching
+const MAX_CONSECUTIVE_FAILURES = 3;
 
 // Check if we should skip API calls based on previous failures
 const shouldSkipRequest = (url: string): boolean => {
   const now = Date.now();
+  
+  // If we've had multiple consecutive failures, extend the offline period
+  if (connectionState === 'offline' && consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+    const extendedInterval = CONNECTION_CHECK_INTERVAL * Math.min(consecutiveFailures, 10);
+    if (now - lastConnectionCheck < extendedInterval) {
+      return true;
+    }
+  }
+  
+  // Regular offline check
   if (connectionState === 'offline' && now - lastConnectionCheck < CONNECTION_CHECK_INTERVAL) {
     return true;
   }
+  
   return false;
 };
 
 // Update connection state based on request results
 const updateConnectionState = (success: boolean) => {
+  const previousState = connectionState;
   connectionState = success ? 'online' : 'offline';
   lastConnectionCheck = Date.now();
+  
+  if (success) {
+    consecutiveFailures = 0; // Reset failure count on success
+    if (previousState === 'offline') {
+      console.log('🟢 API connection restored!');
+    }
+  } else {
+    consecutiveFailures++;
+    if (previousState !== 'offline') {
+      console.log(`🔴 API connection lost (failure ${consecutiveFailures})`);
+    }
+  }
 };
 
 // Reset connection state (useful for manual retry)
 const resetConnectionState = () => {
   connectionState = 'unknown';
   lastConnectionCheck = 0;
+  consecutiveFailures = 0;
+  console.log('🔄 Connection state reset - will retry API calls');
 };
 
-// Global error suppression for network errors (run once on module load)
+// Aggressive global error suppression (run once on module load)
 (function setupGlobalErrorSuppression() {
   const originalConsoleError = console.error;
   const originalConsoleWarn = console.warn;
   const originalConsoleLog = console.log;
   
-  // Override console.error to filter out network errors
+  // Track the current script element to filter by source
+  const currentScript = (document.currentScript as HTMLScriptElement)?.src || '';
+  
+  // Override console.error to filter out ALL network errors
   console.error = (...args) => {
-    const message = args.join(' ');
-    if (message.includes('net::ERR_CONNECTION_REFUSED') ||
+    const message = String(args[0] || '');
+    
+    // Suppress ALL localhost:5000 related errors
+    if (message.includes('localhost:5000') ||
+        message.includes('net::ERR_CONNECTION_REFUSED') ||
         message.includes('ERR_CONNECTION_REFUSED') ||
         message.includes('Failed to fetch') ||
-        (message.includes('GET http://localhost:5000') && message.includes('net::ERR_')) ||
-        (message.includes('localhost:5000') && message.includes('ERR_'))) {
-      // Suppress these specific network errors
-      return;
+        (message.includes('GET http://') && message.includes('net::ERR_'))) {
+      return; // Completely suppress
     }
+    
     // Call original console.error for other messages
     originalConsoleError.apply(console, args);
   };
 
   // Override console.warn to filter out network warnings
   console.warn = (...args) => {
-    const message = args.join(' ');
-    if (message.includes('net::ERR_CONNECTION_REFUSED') ||
-        message.includes('localhost:5000') ||
+    const message = String(args[0] || '');
+    if (message.includes('localhost:5000') ||
+        message.includes('net::ERR_') ||
         message.includes('Failed to fetch')) {
       return;
     }
     originalConsoleWarn.apply(console, args);
   };
 
-  // Override console.log to filter out network logs
+  // Override console.log to filter out network logs  
   console.log = (...args) => {
-    const message = args.join(' ');
-    if (message.includes('GET http://localhost:5000') && message.includes('net::ERR_')) {
+    const message = String(args[0] || '');
+    if (message.includes('GET http://localhost:5000') ||
+        (message.includes('localhost:5000') && message.includes('ERR_'))) {
       return;
     }
     originalConsoleLog.apply(console, args);
+  };
+
+  // Global error event handler to catch any remaining errors
+  const originalErrorHandler = window.onerror;
+  window.onerror = function(message, source, lineno, colno, error) {
+    const errorMessage = String(message || '');
+    
+    // Suppress network-related errors
+    if (errorMessage.includes('localhost:5000') ||
+        errorMessage.includes('net::ERR_CONNECTION_REFUSED') ||
+        errorMessage.includes('Failed to fetch')) {
+      return true; // Prevent default browser error logging
+    }
+    
+    // Call original error handler if exists
+    if (originalErrorHandler) {
+      return originalErrorHandler.call(this, message, source, lineno, colno, error);
+    }
+    return false;
+  };
+
+  // Unhandled promise rejection handler
+  const originalRejectionHandler = window.onunhandledrejection;
+  window.onunhandledrejection = function(event) {
+    const reason = String(event.reason?.message || event.reason || '');
+    
+    // Suppress network-related promise rejections
+    if (reason.includes('localhost:5000') ||
+        reason.includes('net::ERR_CONNECTION_REFUSED') ||
+        reason.includes('Failed to fetch') ||
+        reason.includes('CONNECTION_FAILED')) {
+      event.preventDefault(); // Prevent logging
+      return;
+    }
+    
+    // Call original handler if exists
+    if (originalRejectionHandler) {
+      return originalRejectionHandler.call(window, event);
+    }
+     };
+
+  // Aggressive fetch override to prevent localhost:5000 calls completely
+  const originalFetch = window.fetch;
+  window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const url = typeof input === 'string' ? input : 
+                input instanceof URL ? input.href :
+                input instanceof Request ? input.url : '';
+    
+    // If URL contains localhost:5000 and we're in aggressive offline mode
+    if (url.includes('localhost:5000') && consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+      // Return a fake promise that rejects immediately 
+      return Promise.reject(new Error('CONNECTION_FAILED_INTERCEPTED'));
+    }
+    
+    // If we know we're offline, prevent localhost calls
+    if (url.includes('localhost:5000') && connectionState === 'offline') {
+      return Promise.reject(new Error('CONNECTION_FAILED_OFFLINE'));
+    }
+    
+    // Call original fetch for other URLs
+    return originalFetch.call(this, input, init);
   };
 })();
 
 // Enhanced silent fetch with aggressive error suppression
 const silentFetch = async (url: string, options: RequestInit): Promise<Response> => {
-  // Skip request if we know we're offline
+  // Skip request if we know we're offline (COMPLETELY PREVENT NETWORK CALL)
   if (shouldSkipRequest(url)) {
     throw new Error('CONNECTION_FAILED_CACHED');
+  }
+  
+  // Additional check for localhost URLs - prevent all localhost calls in aggressive mode
+  if (url.includes('localhost:5000') && consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+    throw new Error('CONNECTION_FAILED_AGGRESSIVE');
   }
 
   // Store original console methods and global error handler
@@ -368,6 +468,9 @@ const withRetry = async <T>(
       // Handle connection errors immediately without retrying
       if (lastError.message.includes('CONNECTION_FAILED') ||
           lastError.message.includes('CONNECTION_FAILED_CACHED') ||
+          lastError.message.includes('CONNECTION_FAILED_AGGRESSIVE') ||
+          lastError.message.includes('CONNECTION_FAILED_INTERCEPTED') ||
+          lastError.message.includes('CONNECTION_FAILED_OFFLINE') ||
           lastError.message.includes('ERR_CONNECTION_REFUSED') || 
           lastError.message.includes('Failed to fetch') ||
           lastError.message.includes('fetch is not defined')) {
@@ -544,13 +647,19 @@ export class FishFeederApiClient {
         // Handle connection errors gracefully in production
         if (error.message.includes('CONNECTION_FAILED') ||
             error.message.includes('CONNECTION_FAILED_CACHED') ||
+            error.message.includes('CONNECTION_FAILED_AGGRESSIVE') ||
+            error.message.includes('CONNECTION_FAILED_INTERCEPTED') ||
+            error.message.includes('CONNECTION_FAILED_OFFLINE') ||
             error.message.includes('ERR_CONNECTION_REFUSED') || 
             error.message.includes('Request timeout') ||
             error.message.includes('Failed to fetch') ||
             error.message.includes('fetch is not defined')) {
           // Only log once per connection state change to reduce noise
-          if (error.message.includes('CONNECTION_FAILED_CACHED')) {
-            // Don't log for cached failures
+          if (error.message.includes('CONNECTION_FAILED_CACHED') || 
+              error.message.includes('CONNECTION_FAILED_AGGRESSIVE') ||
+              error.message.includes('CONNECTION_FAILED_INTERCEPTED') ||
+              error.message.includes('CONNECTION_FAILED_OFFLINE')) {
+            // Don't log for cached/aggressive/intercepted failures - completely silent
           } else {
             console.log(`🔄 API connection failed for ${endpoint}, returning offline response`);
           }
