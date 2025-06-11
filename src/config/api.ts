@@ -201,36 +201,126 @@ const withTimeout = <T>(promise: Promise<T>, timeout: number): Promise<T> => {
 };
 
 // Retry helper with exponential backoff and offline mode handling
-// Silent fetch wrapper to reduce console noise
+// Connection state tracking to prevent repeated failed requests
+let connectionState = 'unknown'; // 'online', 'offline', 'unknown'
+let lastConnectionCheck = 0;
+const CONNECTION_CHECK_INTERVAL = 10000; // 10 seconds
+
+// Check if we should skip API calls based on previous failures
+const shouldSkipRequest = (url: string): boolean => {
+  const now = Date.now();
+  if (connectionState === 'offline' && now - lastConnectionCheck < CONNECTION_CHECK_INTERVAL) {
+    return true;
+  }
+  return false;
+};
+
+// Update connection state based on request results
+const updateConnectionState = (success: boolean) => {
+  connectionState = success ? 'online' : 'offline';
+  lastConnectionCheck = Date.now();
+};
+
+// Reset connection state (useful for manual retry)
+const resetConnectionState = () => {
+  connectionState = 'unknown';
+  lastConnectionCheck = 0;
+};
+
+// Global error suppression for network errors (run once on module load)
+(function setupGlobalErrorSuppression() {
+  const originalConsoleError = console.error;
+  
+  // Override console.error to filter out network errors
+  console.error = (...args) => {
+    const message = args.join(' ');
+    if (message.includes('net::ERR_CONNECTION_REFUSED') ||
+        message.includes('ERR_CONNECTION_REFUSED') ||
+        message.includes('GET http://localhost:5000') && message.includes('net::ERR_')) {
+      // Suppress these specific network errors
+      return;
+    }
+    // Call original console.error for other messages
+    originalConsoleError.apply(console, args);
+  };
+})();
+
+// Enhanced silent fetch with aggressive error suppression
 const silentFetch = async (url: string, options: RequestInit): Promise<Response> => {
-  // Store original console methods
+  // Skip request if we know we're offline
+  if (shouldSkipRequest(url)) {
+    throw new Error('CONNECTION_FAILED_CACHED');
+  }
+
+  // Store original console methods and global error handler
   const originalError = console.error;
   const originalWarn = console.warn;
+  const originalLog = console.log;
+  const originalErrorHandler = window.onerror;
   
-  // Temporarily suppress console errors for fetch operations
+  // Aggressive console suppression
   const suppressConsole = () => {
     console.error = () => {};
     console.warn = () => {};
+    console.log = (...args) => {
+      // Allow our own log messages but suppress network errors
+      const message = args.join(' ');
+      if (message.includes('net::ERR_') || message.includes('ERR_CONNECTION_REFUSED')) {
+        return;
+      }
+      originalLog.apply(console, args);
+    };
+    
+    // Suppress global error events for network issues
+    window.onerror = (message, source, lineno, colno, error) => {
+      if (typeof message === 'string' && 
+          (message.includes('net::ERR_') || 
+           message.includes('ERR_CONNECTION_REFUSED') ||
+           message.includes('Failed to fetch'))) {
+        return true; // Prevent default browser error logging
+      }
+      return originalErrorHandler ? originalErrorHandler(message, source, lineno, colno, error) : false;
+    };
   };
   
   // Restore console methods
   const restoreConsole = () => {
     console.error = originalError;
     console.warn = originalWarn;
+    console.log = originalLog;
+    window.onerror = originalErrorHandler;
   };
   
   try {
     suppressConsole();
-    return await fetch(url, options);
+    
+    // Add a very short timeout to fail fast for connection issues
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+    
+    const fetchOptions = {
+      ...options,
+      signal: controller.signal
+    };
+    
+    const response = await fetch(url, fetchOptions);
+    clearTimeout(timeoutId);
+    
+    updateConnectionState(true);
+    return response;
   } catch (error) {
-    // Check for connection errors and handle silently
-    if (error instanceof Error && 
-        (error.message.includes('ERR_CONNECTION_REFUSED') || 
-         error.message.includes('Failed to fetch') ||
-         error.message.includes('net::ERR_') ||
-         error.name === 'TypeError')) {
-      // Throw a clean error without the browser console noise
-      throw new Error('CONNECTION_FAILED');
+    updateConnectionState(false);
+    
+    // Handle all connection-related errors silently
+    if (error instanceof Error) {
+      if (error.name === 'AbortError' ||
+          error.message.includes('ERR_CONNECTION_REFUSED') || 
+          error.message.includes('Failed to fetch') ||
+          error.message.includes('net::ERR_') ||
+          error.message.includes('TypeError') ||
+          error.message.includes('NetworkError')) {
+        throw new Error('CONNECTION_FAILED');
+      }
     }
     throw error;
   } finally {
@@ -253,6 +343,7 @@ const withRetry = async <T>(
       
       // Handle connection errors immediately without retrying
       if (lastError.message.includes('CONNECTION_FAILED') ||
+          lastError.message.includes('CONNECTION_FAILED_CACHED') ||
           lastError.message.includes('ERR_CONNECTION_REFUSED') || 
           lastError.message.includes('Failed to fetch') ||
           lastError.message.includes('fetch is not defined')) {
@@ -428,11 +519,17 @@ export class FishFeederApiClient {
         
         // Handle connection errors gracefully in production
         if (error.message.includes('CONNECTION_FAILED') ||
+            error.message.includes('CONNECTION_FAILED_CACHED') ||
             error.message.includes('ERR_CONNECTION_REFUSED') || 
             error.message.includes('Request timeout') ||
             error.message.includes('Failed to fetch') ||
             error.message.includes('fetch is not defined')) {
-          console.log(`🔄 API connection failed for ${endpoint}, returning offline response`);
+          // Only log once per connection state change to reduce noise
+          if (error.message.includes('CONNECTION_FAILED_CACHED')) {
+            // Don't log for cached failures
+          } else {
+            console.log(`🔄 API connection failed for ${endpoint}, returning offline response`);
+          }
           return this.getMockResponse(endpoint);
         }
         
@@ -601,6 +698,11 @@ export class FishFeederApiClient {
   // Clear cache
   clearCache(): void {
     apiCache.clear();
+  }
+
+  // Reset connection state for manual retry
+  resetConnection(): void {
+    resetConnectionState();
   }
 
   private getMockResponse(endpoint: string): any {
