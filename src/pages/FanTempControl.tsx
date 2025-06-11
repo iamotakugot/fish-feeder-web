@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { Slider } from "@heroui/slider";
 import { Switch } from "@heroui/switch";
 import { Button } from "@heroui/button";
-import { FaTemperatureHigh, FaFan } from "react-icons/fa";
+import { Input } from "@heroui/input";
+import { FaTemperatureHigh, FaFan, FaDatabase, FaSync } from "react-icons/fa";
 import { HiStatusOnline } from "react-icons/hi";
 import { RiBlazeFill } from "react-icons/ri";
 import { IoMdSettings } from "react-icons/io";
-import { Input } from "@heroui/input";
 import {
   ResponsiveContainer,
   LineChart,
@@ -24,30 +24,61 @@ import {
   BlowerControlRequest,
 } from "../config/api";
 
+// Firebase imports
+import { firebaseClient } from "../config/firebase";
+import { getDatabase } from "firebase/database";
+import { ref, set, get, onValue, off } from "firebase/database";
+
+// Get database instance
+const database = getDatabase();
+
 // Define the SliderStepMark type based on HeroUI docs
 type SliderStepMark = {
   value: number;
   label: string;
 };
 
+// Firebase settings interface
+interface FanControlSettings {
+  temperatureThreshold: number;
+  fanSpeed: number;
+  autoMode: boolean;
+  hysteresis: number;
+  lastUpdated: string;
+}
+
+// Default settings
+const DEFAULT_SETTINGS: FanControlSettings = {
+  temperatureThreshold: 40, // Default 40°C
+  fanSpeed: 255, // Default full speed
+  autoMode: true,
+  hysteresis: 2,
+  lastUpdated: new Date().toISOString(),
+};
+
 const FanTempControl = () => {
   // States for fan control
-  const [systemTemperature, setSystemTemperature] = useState(25); // Actual current temperature from DHT22_SYSTEM
+  const [systemTemperature, setSystemTemperature] = useState(25); // DHT22 PIN 48 (system/control box)
   const [feederTemperature, setFeederTemperature] = useState(25); // Temperature from DHT22_FEEDER
-  const [temperatureThreshold, setTemperatureThreshold] = useState(30); // Fan activation threshold
+  const [temperatureThreshold, setTemperatureThreshold] = useState(40); // Fan activation threshold
   const [autoFanMode, setAutoFanMode] = useState(true);
   const [fanStatus, setFanStatus] = useState(false);
-  const [blowerSpeed, setBlowerSpeed] = useState(100);
+  const [blowerSpeed, setBlowerSpeed] = useState(255); // Default 255
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("Connecting...");
   const [apiClient] = useState(new FishFeederApiClient());
-  const [tempThreshold, setTempThreshold] = useState(30);
   const [hysteresis, setHysteresis] = useState(2);
-  const [updateInterval, setUpdateInterval] = useState(3);
+  const [updateInterval, setUpdateInterval] = useState(5); // 5 seconds sync
+  
+  // Firebase states
+  const [firebaseConnected, setFirebaseConnected] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>("");
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
+  
   const [tempHistory, setTempHistory] = useState<any[]>([
-    { time: "12:00", feederTemp: 25, systemTemp: 23, threshold: 30 },
-    { time: "13:00", feederTemp: 26, systemTemp: 24, threshold: 30 },
-    { time: "14:00", feederTemp: 28, systemTemp: 25, threshold: 30 },
+    { time: "12:00", feederTemp: 25, systemTemp: 23, threshold: 40 },
+    { time: "13:00", feederTemp: 26, systemTemp: 24, threshold: 40 },
+    { time: "14:00", feederTemp: 28, systemTemp: 25, threshold: 40 },
   ]);
 
   // Define slider marks
@@ -57,21 +88,93 @@ const FanTempControl = () => {
     { value: 30, label: "30°C" },
     { value: 35, label: "35°C" },
     { value: 40, label: "40°C" },
+    { value: 45, label: "45°C" },
+    { value: 50, label: "50°C" },
   ];
 
   const speedMarks: SliderStepMark[] = [
-    { value: 0, label: "0%" },
-    { value: 50, label: "50%" },
-    { value: 100, label: "100%" },
-    { value: 150, label: "150%" },
-    { value: 200, label: "200%" },
-    { value: 255, label: "255%" },
+    { value: 0, label: "0" },
+    { value: 64, label: "64" },
+    { value: 128, label: "128" },
+    { value: 192, label: "192" },
+    { value: 255, label: "255" },
   ];
+
+  // Firebase functions
+  const saveSettingsToFirebase = async (settings: Partial<FanControlSettings>) => {
+    try {
+      const settingsRef = ref(database, 'fish_feeder/fan_control/settings');
+      const fullSettings: FanControlSettings = {
+        temperatureThreshold,
+        fanSpeed: blowerSpeed,
+        autoMode: autoFanMode,
+        hysteresis,
+        lastUpdated: new Date().toISOString(),
+        ...settings,
+      };
+      
+      await set(settingsRef, fullSettings);
+      setLastSyncTime(new Date().toLocaleTimeString());
+      console.log("Settings saved to Firebase:", fullSettings);
+    } catch (error) {
+      console.error("Failed to save settings to Firebase:", error);
+    }
+  };
+
+  const loadSettingsFromFirebase = async () => {
+    try {
+      const settingsRef = ref(database, 'fish_feeder/fan_control/settings');
+      const snapshot = await get(settingsRef);
+      
+      if (snapshot.exists()) {
+        const settings: FanControlSettings = snapshot.val();
+        setTemperatureThreshold(settings.temperatureThreshold);
+        setBlowerSpeed(settings.fanSpeed);
+        setAutoFanMode(settings.autoMode);
+        setHysteresis(settings.hysteresis);
+        setLastSyncTime(new Date().toLocaleTimeString());
+        setFirebaseConnected(true);
+        console.log("Settings loaded from Firebase:", settings);
+      } else {
+        // Save default settings if none exist
+        await saveSettingsToFirebase(DEFAULT_SETTINGS);
+      }
+    } catch (error) {
+      console.error("Failed to load settings from Firebase:", error);
+      setFirebaseConnected(false);
+      // Use default settings when Firebase fails
+      setTemperatureThreshold(DEFAULT_SETTINGS.temperatureThreshold);
+      setBlowerSpeed(DEFAULT_SETTINGS.fanSpeed);
+      setAutoFanMode(DEFAULT_SETTINGS.autoMode);
+      setHysteresis(DEFAULT_SETTINGS.hysteresis);
+    }
+  };
+
+  // Real-time Firebase listener
+  useEffect(() => {
+    if (autoSyncEnabled) {
+      const settingsRef = ref(database, 'fish_feeder/fan_control/settings');
+      
+      const unsubscribe = onValue(settingsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const settings: FanControlSettings = snapshot.val();
+          setTemperatureThreshold(settings.temperatureThreshold);
+          setBlowerSpeed(settings.fanSpeed);
+          setAutoFanMode(settings.autoMode);
+          setHysteresis(settings.hysteresis);
+          setLastSyncTime(new Date().toLocaleTimeString());
+          setFirebaseConnected(true);
+        }
+      });
+
+      return () => off(settingsRef, 'value', unsubscribe);
+    }
+  }, [autoSyncEnabled]);
 
   // Fetch temperature data from Pi server
   const fetchTemperatureData = async () => {
     try {
-      // Get DHT22_SYSTEM data (control box temperature)
+      // Get DHT22_SYSTEM data (control box temperature - PIN 48)
       const systemSensor = await apiClient.getSensor(
         API_CONFIG.SENSOR_NAMES.DHT22_SYSTEM,
       );
@@ -96,6 +199,19 @@ const FanTempControl = () => {
       }
 
       setConnectionStatus("✅ Connected to Pi Server");
+      
+      // Send current temperature data to Firebase for Pi server access
+      try {
+        const tempRef = ref(database, 'fish_feeder/fan_control/current_temperature');
+        await set(tempRef, {
+          systemTemp: systemTemp?.value || 0,
+          feederTemp: feederTemp?.value || 0,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (fbError) {
+        console.error("Failed to update temperature in Firebase:", fbError);
+      }
+      
     } catch (error) {
       console.error("Failed to fetch temperature data:", error);
       setConnectionStatus("❌ Mock Data");
@@ -103,54 +219,70 @@ const FanTempControl = () => {
       // Simulate temperature changes for demo
       setSystemTemperature((prev) => {
         const fluctuation = (Math.random() - 0.5) * 0.5;
-
         return Math.round((prev + fluctuation) * 10) / 10;
       });
       setFeederTemperature((prev) => {
         const fluctuation = (Math.random() - 0.5) * 0.3;
-
         return Math.round((prev + fluctuation) * 10) / 10;
       });
     }
   };
 
-  // Effect to control fan based on temperature when in auto mode
+  // Auto fan control logic with hysteresis
   useEffect(() => {
     if (autoFanMode) {
-      // Use the higher of the two temperatures for fan control
-      const maxTemp = Math.max(systemTemperature, feederTemperature);
-      const shouldActivate = maxTemp >= temperatureThreshold;
+      // Use system temperature (DHT22 PIN 48) for fan control
+      const currentTemp = systemTemperature;
+      const shouldActivate = currentTemp >= temperatureThreshold;
+      const shouldDeactivate = currentTemp <= (temperatureThreshold - hysteresis);
 
-      if (shouldActivate !== fanStatus) {
-        setFanStatus(shouldActivate);
-        // Auto control the blower based on temperature
-        if (shouldActivate) {
-          handleBlowerControl("start");
-        } else {
-          handleBlowerControl("stop");
-        }
+      if (!fanStatus && shouldActivate) {
+        // Turn fan ON
+        setFanStatus(true);
+        handleRelayControl("R:2"); // Relay IN1 PIN 52
+        console.log(`🌡️ Auto Fan ON: Temp ${currentTemp}°C >= ${temperatureThreshold}°C`);
+      } else if (fanStatus && shouldDeactivate) {
+        // Turn fan OFF
+        setFanStatus(false);
+        handleRelayControl("R:0"); // Relay OFF
+        console.log(`🌡️ Auto Fan OFF: Temp ${currentTemp}°C <= ${temperatureThreshold - hysteresis}°C`);
       }
     }
-  }, [
-    systemTemperature,
-    feederTemperature,
-    temperatureThreshold,
-    autoFanMode,
-    fanStatus,
-  ]);
+  }, [systemTemperature, temperatureThreshold, autoFanMode, fanStatus, hysteresis]);
 
-  // Fetch temperature data on component mount and set interval
-  useEffect(() => {
-    fetchTemperatureData();
-    const interval = setInterval(
-      fetchTemperatureData,
-      API_CONFIG.REFRESH_INTERVALS.SENSORS,
-    );
+  // Handle relay control via Pi server API (for Relay IN1 PIN 52)
+  const handleRelayControl = async (command: string) => {
+    try {
+      setLoading(true);
+      
+      // Send direct command to Arduino via Pi server
+      const response = await apiClient.directControl({ command });
+      console.log(`Relay command ${command} response:`, response);
 
-    return () => clearInterval(interval);
-  }, []);
+      // Update Firebase with fan status
+      try {
+        const statusRef = ref(database, 'fish_feeder/fan_control/status');
+        await set(statusRef, {
+          fanStatus: command === "R:2",
+          command: command,
+          timestamp: new Date().toISOString(),
+          temperature: systemTemperature,
+          threshold: temperatureThreshold,
+        });
+      } catch (fbError) {
+        console.error("Failed to update fan status in Firebase:", fbError);
+      }
 
-  // Handle blower control via Pi server API
+    } catch (error) {
+      console.error(`Failed to send relay command ${command}:`, error);
+      // Update local state anyway for demo purposes
+      setFanStatus(command === "R:2");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle blower control via Pi server API (legacy support)
   const handleBlowerControl = async (
     action: BlowerControlRequest["action"],
     value?: number,
@@ -164,7 +296,6 @@ const FanTempControl = () => {
       }
 
       const response = await apiClient.controlBlower(request);
-
       console.log(`Blower ${action} response:`, response);
 
       if (response.status === "success") {
@@ -190,19 +321,46 @@ const FanTempControl = () => {
   // Handle manual fan toggle
   const handleManualFanToggle = async () => {
     if (!autoFanMode) {
-      const action = fanStatus ? "stop" : "start";
-
-      await handleBlowerControl(action);
+      const command = fanStatus ? "R:0" : "R:2";
+      await handleRelayControl(command);
     }
   };
 
-  // Handle speed change
+  // Handle threshold change with Firebase save
+  const handleThresholdChange = async (newThreshold: number) => {
+    setTemperatureThreshold(newThreshold);
+    await saveSettingsToFirebase({ temperatureThreshold: newThreshold });
+  };
+
+  // Handle speed change with Firebase save
   const handleSpeedChange = async (newSpeed: number) => {
     setBlowerSpeed(newSpeed);
-    if (fanStatus) {
-      await handleBlowerControl("speed", newSpeed);
+    await saveSettingsToFirebase({ fanSpeed: newSpeed });
+  };
+
+  // Handle auto mode change with Firebase save
+  const handleAutoModeChange = async (enabled: boolean) => {
+    setAutoFanMode(enabled);
+    await saveSettingsToFirebase({ autoMode: enabled });
+    
+    if (!enabled) {
+      // Turn off fan when switching to manual mode
+      setFanStatus(false);
+      await handleRelayControl("R:0");
     }
   };
+
+  // Load Firebase settings on component mount
+  useEffect(() => {
+    loadSettingsFromFirebase();
+  }, []);
+
+  // Fetch temperature data on component mount and set interval
+  useEffect(() => {
+    fetchTemperatureData();
+    const interval = setInterval(fetchTemperatureData, updateInterval * 1000);
+    return () => clearInterval(interval);
+  }, [updateInterval]);
 
   const loadTemperatureData = async () => {
     try {
@@ -212,31 +370,31 @@ const FanTempControl = () => {
           time: "12:00",
           feederTemp: 25,
           systemTemp: 23,
-          threshold: tempThreshold,
+          threshold: temperatureThreshold,
         },
         {
           time: "13:00",
           feederTemp: 26,
           systemTemp: 24,
-          threshold: tempThreshold,
+          threshold: temperatureThreshold,
         },
         {
           time: "14:00",
           feederTemp: 28,
           systemTemp: 25,
-          threshold: tempThreshold,
+          threshold: temperatureThreshold,
         },
         {
           time: "15:00",
           feederTemp: 30,
           systemTemp: 27,
-          threshold: tempThreshold,
+          threshold: temperatureThreshold,
         },
         {
           time: "16:00",
           feederTemp: 32,
           systemTemp: 29,
-          threshold: tempThreshold,
+          threshold: temperatureThreshold,
         },
       ];
 
@@ -248,7 +406,7 @@ const FanTempControl = () => {
 
   useEffect(() => {
     loadTemperatureData();
-  }, [tempThreshold]);
+  }, [temperatureThreshold]);
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-6 space-y-6">
@@ -256,64 +414,109 @@ const FanTempControl = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
           <FaTemperatureHigh className="mr-3 text-orange-500" />
-          Fan & Temperature Control
+          Automatic Fan & Temperature Control
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Automated temperature monitoring and fan control system
+          DHT22 (PIN 48) based automatic cooling system with Relay IN1 (PIN 52) control
         </p>
       </div>
 
       {/* Connection Status */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <HiStatusOnline className="mr-2 text-green-500" />
-            <div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Connection Status
-              </div>
-              <div
-                className={`font-semibold ${
-                  connectionStatus.includes("✅")
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-red-600 dark:text-red-400"
-                }`}
-              >
-                {connectionStatus}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <HiStatusOnline className="mr-2 text-green-500" />
+              <div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Pi Server Connection
+                </div>
+                <div
+                  className={`font-semibold ${
+                    connectionStatus.includes("✅")
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-red-600 dark:text-red-400"
+                  }`}
+                >
+                  {connectionStatus}
+                </div>
               </div>
             </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {updateInterval}s sync
+            </div>
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Auto Update: {API_CONFIG.REFRESH_INTERVALS.SENSORS / 1000}s
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <FaDatabase className="mr-2 text-blue-500" />
+              <div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Firebase Sync
+                </div>
+                <div
+                  className={`font-semibold ${
+                    firebaseConnected
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-red-600 dark:text-red-400"
+                  }`}
+                >
+                  {firebaseConnected ? "🔥 Connected" : "❌ Offline"}
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <Switch
+                size="sm"
+                isSelected={autoSyncEnabled}
+                onValueChange={setAutoSyncEnabled}
+              />
+              <div className="text-xs text-gray-500 mt-1">
+                {lastSyncTime && `Last: ${lastSyncTime}`}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Temperature Display Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* System Temperature */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        {/* System Temperature (DHT22 PIN 48) */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border-l-4 border-l-red-500">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <FaTemperatureHigh className="text-red-500 mr-2 text-xl" />
               <span className="font-medium text-gray-900 dark:text-gray-100">
-                System Temperature
+                Control Box Temperature
               </span>
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              DHT22_SYSTEM
+              DHT22 PIN 48
             </div>
           </div>
-          <div className="text-3xl font-bold text-red-600 dark:text-red-400">
+          <div className="text-4xl font-bold text-red-600 dark:text-red-400 mb-2">
             {systemTemperature.toFixed(1)}°C
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Control box ambient temperature
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            🎯 Threshold: {temperatureThreshold}°C
+          </div>
+          <div className="mt-2">
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                systemTemperature >= temperatureThreshold
+                  ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                  : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+              }`}
+            >
+              {systemTemperature >= temperatureThreshold ? "🔥 Above Threshold" : "❄️ Below Threshold"}
+            </span>
           </div>
         </div>
 
         {/* Feeder Temperature */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border-l-4 border-l-orange-500">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <FaTemperatureHigh className="text-orange-500 mr-2 text-xl" />
@@ -325,10 +528,10 @@ const FanTempControl = () => {
               DHT22_FEEDER
             </div>
           </div>
-          <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+          <div className="text-4xl font-bold text-orange-600 dark:text-orange-400 mb-2">
             {feederTemperature.toFixed(1)}°C
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
             Feed bucket internal temperature
           </div>
         </div>
@@ -338,7 +541,7 @@ const FanTempControl = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
         <div className="flex items-center text-blue-500 dark:text-blue-400 mb-6">
           <FaFan className="mr-2 text-xl" />
-          <span className="text-lg font-medium">Cooling Fan Control</span>
+          <span className="text-lg font-medium">Automatic Cooling Fan Control</span>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -351,14 +554,14 @@ const FanTempControl = () => {
                   Automatic Mode
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Fan controlled by temperature threshold
+                  Fan controlled by DHT22 (PIN 48) temperature
                 </div>
               </div>
               <Switch
                 color="primary"
                 isSelected={autoFanMode}
                 size="lg"
-                onValueChange={setAutoFanMode}
+                onValueChange={handleAutoModeChange}
               />
             </div>
 
@@ -377,15 +580,40 @@ const FanTempControl = () => {
                 color="warning"
                 isDisabled={!autoFanMode}
                 marks={temperatureMarks}
-                maxValue={40}
+                maxValue={50}
                 minValue={20}
                 size="lg"
                 step={0.5}
                 value={temperatureThreshold}
-                onChange={(value) => setTemperatureThreshold(value as number)}
+                onChange={(value) => handleThresholdChange(value as number)}
               />
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                Fan will start when temperature exceeds this threshold
+                🎯 Fan turns ON at {temperatureThreshold}°C | OFF at {temperatureThreshold - hysteresis}°C
+              </div>
+            </div>
+
+            {/* Hysteresis Control */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="font-medium text-gray-900 dark:text-gray-100">
+                  Hysteresis (°C)
+                </label>
+                <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                  {hysteresis}°C
+                </span>
+              </div>
+              <Slider
+                className="w-full"
+                color="secondary"
+                maxValue={5}
+                minValue={0.5}
+                size="md"
+                step={0.5}
+                value={hysteresis}
+                onChange={(value) => setHysteresis(value as number)}
+              />
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Prevents fan from rapidly switching on/off
               </div>
             </div>
 
@@ -404,7 +632,7 @@ const FanTempControl = () => {
                   onPress={handleManualFanToggle}
                 >
                   <FaFan className="mr-2" />
-                  {fanStatus ? "Turn Fan OFF" : "Turn Fan ON"}
+                  {fanStatus ? "Turn Fan OFF (R:0)" : "Turn Fan ON (R:2)"}
                 </Button>
               </div>
             )}
@@ -413,10 +641,10 @@ const FanTempControl = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="font-medium text-gray-900 dark:text-gray-100">
-                  Fan Speed
+                  Fan Speed (PWM)
                 </label>
                 <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                  {blowerSpeed} ({Math.round(blowerSpeed * 2.55)}/255)
+                  {blowerSpeed}/255
                 </span>
               </div>
               <Slider
@@ -431,7 +659,7 @@ const FanTempControl = () => {
                 onChange={(value) => handleSpeedChange(value as number)}
               />
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                PWM speed control (0-255)
+                Default: 255 (Full Speed) | PWM speed control (0-255)
               </div>
             </div>
           </div>
@@ -446,10 +674,44 @@ const FanTempControl = () => {
                 }`}
               />
               <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                Fan Status: {fanStatus ? "RUNNING" : "STOPPED"}
+                Relay IN1 (PIN 52): {fanStatus ? "ON" : "OFF"}
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                {autoFanMode ? "Auto Mode" : "Manual Mode"}
+              <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                {autoFanMode ? "🤖 Auto Mode" : "👤 Manual Mode"}
+              </div>
+              <span
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  fanStatus
+                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                    : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                }`}
+              >
+                {fanStatus ? "🌀 Fan Running" : "⏸️ Fan Stopped"}
+              </span>
+            </div>
+
+            {/* System Status */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-3">
+                System Status
+              </h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Current Temp:</span>
+                  <span className="font-mono">{systemTemperature.toFixed(1)}°C</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Threshold:</span>
+                  <span className="font-mono">{temperatureThreshold}°C</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Turn Off At:</span>
+                  <span className="font-mono">{(temperatureThreshold - hysteresis).toFixed(1)}°C</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Fan Speed:</span>
+                  <span className="font-mono">{blowerSpeed}/255</span>
+                </div>
               </div>
             </div>
 
@@ -463,8 +725,8 @@ const FanTempControl = () => {
                 variant="bordered"
                 onPress={() => fetchTemperatureData()}
               >
-                <HiStatusOnline className="mr-2" />
-                Refresh Temperature
+                <FaSync className="mr-2" />
+                Refresh Data
               </Button>
 
               <Button
@@ -473,10 +735,22 @@ const FanTempControl = () => {
                 isLoading={loading}
                 size="sm"
                 variant="bordered"
-                onPress={() => handleBlowerControl("stop")}
+                onPress={() => handleRelayControl("R:0")}
               >
                 <RiBlazeFill className="mr-2" />
-                Emergency Stop
+                Emergency Stop (R:0)
+              </Button>
+
+              <Button
+                className="w-full"
+                color="primary"
+                isLoading={loading}
+                size="sm"
+                variant="bordered"
+                onPress={() => saveSettingsToFirebase({})}
+              >
+                <FaDatabase className="mr-2" />
+                Sync to Firebase
               </Button>
             </div>
           </div>
@@ -488,41 +762,11 @@ const FanTempControl = () => {
         <div className="flex items-center text-purple-500 dark:text-purple-400 mb-6">
           <IoMdSettings className="mr-2 text-xl" />
           <span className="text-lg font-medium">
-            Advanced Temperature Settings
+            Advanced System Settings
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Temperature Threshold (°C)
-            </label>
-            <Input
-              max={50}
-              min={20}
-              size="sm"
-              step={0.5}
-              type="number"
-              value={tempThreshold.toString()}
-              onChange={(e) => setTempThreshold(Number(e.target.value))}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Hysteresis (°C)
-            </label>
-            <Input
-              max={5}
-              min={0.5}
-              size="sm"
-              step={0.5}
-              type="number"
-              value={hysteresis.toString()}
-              onChange={(e) => setHysteresis(Number(e.target.value))}
-            />
-          </div>
-
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Update Interval (seconds)
@@ -536,6 +780,51 @@ const FanTempControl = () => {
               value={updateInterval.toString()}
               onChange={(e) => setUpdateInterval(Number(e.target.value))}
             />
+            <div className="text-xs text-gray-500">
+              How often to sync with Pi server
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Min Threshold (°C)
+            </label>
+            <Input
+              size="sm"
+              type="number"
+              value="20"
+              isReadOnly
+            />
+            <div className="text-xs text-gray-500">
+              Minimum temperature threshold
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Max Threshold (°C)
+            </label>
+            <Input
+              size="sm"
+              type="number"
+              value="50"
+              isReadOnly
+            />
+            <div className="text-xs text-gray-500">
+              Maximum temperature threshold
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+          <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">
+            🔧 Hardware Configuration
+          </h4>
+          <div className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+            <div>• DHT22 Sensor: PIN 48 (Control Box Temperature)</div>
+            <div>• Fan Relay: IN1 PIN 52 (R:2 = ON, R:0 = OFF)</div>
+            <div>• Default Settings: Threshold = 40°C, Speed = 255</div>
+            <div>• Auto-save to Firebase for Pi server access</div>
           </div>
         </div>
       </div>
@@ -543,7 +832,7 @@ const FanTempControl = () => {
       {/* Temperature History Chart */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-          Temperature History
+          Temperature History & Threshold
         </h3>
         <div className="h-64">
           <ResponsiveContainer height="100%" width="100%">
@@ -562,14 +851,14 @@ const FanTempControl = () => {
               />
               <Line
                 dataKey="systemTemp"
-                name="System Temp"
+                name="System Temp (PIN 48)"
                 stroke="#ef4444"
-                strokeWidth={2}
+                strokeWidth={3}
                 type="monotone"
               />
               <Line
                 dataKey="threshold"
-                name="Threshold"
+                name="Fan Threshold"
                 stroke="#8b5cf6"
                 strokeDasharray="5 5"
                 strokeWidth={2}
@@ -584,3 +873,4 @@ const FanTempControl = () => {
 };
 
 export default FanTempControl;
+
