@@ -28,8 +28,8 @@ const FeedControl = () => {
   // Device timing controls
   const [actuatorUp, setActuatorUp] = useState("3");
   const [actuatorDown, setActuatorDown] = useState("2");
-  const [augerOn, setAugerOn] = useState("20");
-  const [blowerOn, setBlowerOn] = useState("15");
+  const [augerDuration, setAugerDuration] = useState("20");
+  const [blowerDuration, setBlowerDuration] = useState("15");
 
   // Automatic feeding
   const [automaticFeeding, setAutomaticFeeding] = useState(false);
@@ -39,8 +39,8 @@ const FeedControl = () => {
   // New schedule timing controls
   const [newActuatorUp, setNewActuatorUp] = useState("3");
   const [newActuatorDown, setNewActuatorDown] = useState("2");
-  const [newAugerOn, setNewAugerOn] = useState("20");
-  const [newBlowerOn, setNewBlowerOn] = useState("15");
+  const [newAugerDuration, setNewAugerDuration] = useState("20");
+  const [newBlowerDuration, setNewBlowerDuration] = useState("15");
   
   const [schedules, setSchedules] = useState([
     { 
@@ -49,8 +49,8 @@ const FeedControl = () => {
       type: "breakfast",
       actuator_up: 3,
       actuator_down: 2,
-      auger_on: 20,
-      blower_on: 15
+      auger_duration: 20,
+      blower_duration: 15
     },
     { 
       time: "12:00", 
@@ -58,8 +58,8 @@ const FeedControl = () => {
       type: "lunch",
       actuator_up: 3,
       actuator_down: 2,
-      auger_on: 25,
-      blower_on: 18
+      auger_duration: 25,
+      blower_duration: 18
     },
     { 
       time: "18:00", 
@@ -67,8 +67,8 @@ const FeedControl = () => {
       type: "dinner",
       actuator_up: 3,
       actuator_down: 2,
-      auger_on: 20,
-      blower_on: 15
+      auger_duration: 20,
+      blower_duration: 15
     },
   ]);
 
@@ -183,8 +183,8 @@ const FeedControl = () => {
         ...(feedType === "custom" && { amount: parseInt(feedAmount) }),
         actuator_up: parseInt(actuatorUp),
         actuator_down: parseInt(actuatorDown),
-        auger_on: parseInt(augerOn),
-        blower_on: parseInt(blowerOn),
+        auger_duration: parseInt(augerDuration),
+        blower_duration: parseInt(blowerDuration),
       };
 
       const success = await apiClient.feedFish(feedRequest);
@@ -217,8 +217,8 @@ const FeedControl = () => {
         type: "custom",
         actuator_up: parseInt(newActuatorUp),
         actuator_down: parseInt(newActuatorDown),
-        auger_on: parseInt(newAugerOn),
-        blower_on: parseInt(newBlowerOn),
+        auger_duration: parseInt(newAugerDuration),
+        blower_duration: parseInt(newBlowerDuration),
       };
 
       setSchedules([...schedules, newSchedule]);
@@ -226,8 +226,8 @@ const FeedControl = () => {
       setNewScheduleAmount("100");
       setNewActuatorUp("3");
       setNewActuatorDown("2");
-      setNewAugerOn("20");
-      setNewBlowerOn("15");
+      setNewAugerDuration("20");
+      setNewBlowerDuration("15");
     }
   };
 
@@ -398,35 +398,35 @@ const FeedControl = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Auger On (s)
+                  Auger Duration (s)
                 </label>
                 <Input
                   type="number"
                   size="sm"
                   min="1"
                   max="60"
-                  value={augerOn}
-                  onChange={(e) => setAugerOn(e.target.value)}
+                  value={augerDuration}
+                  onChange={(e) => setAugerDuration(e.target.value)}
                   placeholder="20"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Blower On (s)
+                  Blower Duration (s)
                 </label>
                 <Input
                   type="number"
                   size="sm"
                   min="1"
                   max="60"
-                  value={blowerOn}
-                  onChange={(e) => setBlowerOn(e.target.value)}
+                  value={blowerDuration}
+                  onChange={(e) => setBlowerDuration(e.target.value)}
                   placeholder="15"
                 />
               </div>
             </div>
             <div className="mt-3 text-xs text-orange-600 dark:text-orange-400">
-              💡 Configure device operation timing for precise feeding control
+              💡 Configure device operation timing for auto-stop control
             </div>
           </div>
 
@@ -443,7 +443,7 @@ const FeedControl = () => {
               Feed Now ({feedAmount}g)
             </Button>
             <div className="text-xs text-gray-500 dark:text-gray-400 text-center p-2 bg-gray-100 dark:bg-gray-700 rounded">
-              ⚙️ actuator {actuatorUp}s↑ / {actuatorDown}s↓, auger {augerOn}s, blower {blowerOn}s
+              ⚙️ actuator {actuatorUp}s↑ / {actuatorDown}s↓, auger {augerDuration}s, blower {blowerDuration}s
             </div>
           </div>
 
@@ -497,7 +497,7 @@ const FeedControl = () => {
                   🍚 {schedule.amount}g • {schedule.type}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 rounded p-2">
-                  ⚙️ actuator {schedule.actuator_up}s↑ / {schedule.actuator_down}s↓, auger {schedule.auger_on}s, blower {schedule.blower_on}s
+                  ⚙️ actuator {schedule.actuator_up}s↑ / {schedule.actuator_down}s↓, auger {schedule.auger_duration}s, blower {schedule.blower_duration}s
                 </div>
               </div>
             ))}
@@ -569,29 +569,29 @@ const FeedControl = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Auger On (s)
+                    Auger Duration (s)
                   </label>
                   <Input
                     type="number"
                     size="sm"
                     min="1"
                     max="60"
-                    value={newAugerOn}
-                    onChange={(e) => setNewAugerOn(e.target.value)}
+                    value={newAugerDuration}
+                    onChange={(e) => setNewAugerDuration(e.target.value)}
                     placeholder="20"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Blower On (s)
+                    Blower Duration (s)
                   </label>
                   <Input
                     type="number"
                     size="sm"
                     min="1"
                     max="60"
-                    value={newBlowerOn}
-                    onChange={(e) => setNewBlowerOn(e.target.value)}
+                    value={newBlowerDuration}
+                    onChange={(e) => setNewBlowerDuration(e.target.value)}
                     placeholder="15"
                   />
                 </div>

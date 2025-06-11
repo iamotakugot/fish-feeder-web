@@ -291,8 +291,8 @@ export interface FeedControlRequest {
   duration?: number; // Duration in milliseconds
   actuator_up?: number; // Actuator up time in seconds
   actuator_down?: number; // Actuator down time in seconds
-  auger_on?: number; // Auger motor on time in seconds
-  blower_on?: number; // Blower fan on time in seconds
+  auger_duration?: number; // Auger motor duration in seconds (auto-stop after time)
+  blower_duration?: number; // Blower fan duration in seconds (auto-stop after time)
 }
 
 // Ultra Fast Relay Control
