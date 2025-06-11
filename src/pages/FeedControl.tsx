@@ -509,7 +509,7 @@ const FeedControl = () => {
             {/* Custom Amount Input */}
             {feedType === "custom" && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="custom-feed-amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Amount (grams)
                 </label>
                 <Input
@@ -564,7 +564,7 @@ const FeedControl = () => {
             </h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="actuator-up-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Actuator Up (s)
                 </label>
                 <Input
@@ -581,10 +581,12 @@ const FeedControl = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="actuator-down-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Actuator Down (s)
                 </label>
                 <Input
+                  id="actuator-down-input"
+                  name="actuatorDown"
                   type="number"
                   size="sm"
                   min="1"
@@ -592,13 +594,16 @@ const FeedControl = () => {
                   value={actuatorDown}
                   onChange={(e) => handleTimingChange('actuator_down', e.target.value)}
                   placeholder="2"
+                  aria-label="Actuator down duration in seconds"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="auger-duration-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Auger Duration (s)
                 </label>
                 <Input
+                  id="auger-duration-input"
+                  name="augerDuration"
                   type="number"
                   size="sm"
                   min="1"
@@ -606,13 +611,16 @@ const FeedControl = () => {
                   value={augerDuration}
                   onChange={(e) => handleTimingChange('auger_duration', e.target.value)}
                   placeholder="20"
+                  aria-label="Auger motor duration in seconds"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="blower-duration-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Blower Duration (s)
                 </label>
                 <Input
+                  id="blower-duration-input"
+                  name="blowerDuration"
                   type="number"
                   size="sm"
                   min="1"
@@ -620,6 +628,7 @@ const FeedControl = () => {
                   value={blowerDuration}
                   onChange={(e) => handleTimingChange('blower_duration', e.target.value)}
                   placeholder="15"
+                  aria-label="Blower fan duration in seconds"
                 />
               </div>
             </div>
@@ -689,7 +698,9 @@ const FeedControl = () => {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center text-green-500 dark:text-green-400">
               <BsPlus className="mr-3 text-xl" />
-              <h2 className="text-xl font-semibold">Auto Schedule</h2>
+              <label htmlFor="automatic-feeding-switch" className="text-xl font-semibold cursor-pointer">
+                Auto Schedule
+              </label>
             </div>
             <Switch
               id="automatic-feeding-switch"
@@ -697,6 +708,7 @@ const FeedControl = () => {
               isSelected={automaticFeeding}
               onValueChange={setAutomaticFeeding}
               aria-label="Enable automatic feeding schedule"
+              aria-labelledby={undefined}
             />
           </div>
 

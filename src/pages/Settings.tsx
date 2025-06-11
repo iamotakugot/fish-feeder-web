@@ -354,7 +354,7 @@ const Settings = () => {
           {calibrationMode === "idle" ? (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="known-weight-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   น้ำหนักมาตรฐาน (กรัม)
                 </label>
                 <Input
@@ -482,7 +482,7 @@ const Settings = () => {
 
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="sensor-read-interval" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Sensor Read Interval: {config.timing.sensor_read_interval}s
               </label>
               <Slider
@@ -499,11 +499,12 @@ const Settings = () => {
                 }))}
                 className="max-w-md"
                 aria-label={`Sensor read interval: ${config.timing.sensor_read_interval} seconds`}
+                aria-labelledby={undefined}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="firebase-sync-interval" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Firebase Sync Interval: {config.timing.firebase_sync_interval}s
               </label>
               <Slider
@@ -520,11 +521,12 @@ const Settings = () => {
                 }))}
                 className="max-w-md"
                 aria-label={`Firebase sync interval: ${config.timing.firebase_sync_interval} seconds`}
+                aria-labelledby={undefined}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="websocket-broadcast-interval" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 WebSocket Broadcast: {config.timing.websocket_broadcast_interval}s
               </label>
               <Slider
@@ -541,6 +543,7 @@ const Settings = () => {
                 }))}
                 className="max-w-md"
                 aria-label={`WebSocket broadcast interval: ${config.timing.websocket_broadcast_interval} seconds`}
+                aria-labelledby={undefined}
               />
             </div>
           </div>
@@ -556,7 +559,7 @@ const Settings = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label htmlFor="auto-feed-switch" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Enable Auto Feed
                 </label>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -574,6 +577,7 @@ const Settings = () => {
                   }))
                 }
                 aria-label="Enable automatic feeding schedule"
+                aria-labelledby={undefined}
               />
             </div>
 
