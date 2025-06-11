@@ -200,7 +200,7 @@ const withTimeout = <T>(promise: Promise<T>, timeout: number): Promise<T> => {
   ]);
 };
 
-// Retry helper with exponential backoff
+// Retry helper with exponential backoff and offline mode handling
 const withRetry = async <T>(
   fn: () => Promise<T>,
   maxRetries: number = API_CONFIG.MAX_RETRIES,
@@ -213,12 +213,18 @@ const withRetry = async <T>(
       return await fn();
     } catch (error) {
       lastError = error as Error;
+      
+      // Handle connection errors immediately without retrying
+      if (lastError.message.includes('ERR_CONNECTION_REFUSED') || 
+          lastError.message.includes('Failed to fetch') ||
+          lastError.message.includes('fetch is not defined')) {
+        throw lastError; // Let the main error handler catch this
+      }
 
       if (i === maxRetries) break;
 
-      // Exponential backoff
+      // Exponential backoff for other errors
       const waitTime = delay * Math.pow(2, i);
-
       await new Promise((resolve) => setTimeout(resolve, waitTime));
     }
   }
@@ -584,26 +590,45 @@ export class FishFeederApiClient {
         };
       }
       
-      // All sensors endpoint
-      return {
-        status: 'offline',
-        timestamp,
-        data: {
-          HX711_FEEDER: {
-            sensor_name: 'HX711_FEEDER',
-            timestamp,
-            values: [{ type: 'weight', value: 0.000, unit: 'kg' }]
-          },
-          DHT22_SYSTEM: {
-            sensor_name: 'DHT22_SYSTEM',
-            timestamp,
-            values: [
-              { type: 'temperature', value: 25.0, unit: '°C' },
-              { type: 'humidity', value: 60.0, unit: '%' }
-            ]
+      if (endpoint.includes('DHT22_FEEDER')) {
+        return {
+          sensor_name: 'DHT22_FEEDER',
+          timestamp,
+          values: [
+            { type: 'temperature', value: 24.5, unit: '°C' },
+            { type: 'humidity', value: 65.0, unit: '%' }
+          ]
+        };
+      }
+      
+              // All sensors endpoint
+        return {
+          status: 'offline',
+          timestamp,
+          data: {
+            HX711_FEEDER: {
+              sensor_name: 'HX711_FEEDER',
+              timestamp,
+              values: [{ type: 'weight', value: 0.000, unit: 'kg' }]
+            },
+            DHT22_SYSTEM: {
+              sensor_name: 'DHT22_SYSTEM',
+              timestamp,
+              values: [
+                { type: 'temperature', value: 25.0, unit: '°C' },
+                { type: 'humidity', value: 60.0, unit: '%' }
+              ]
+            },
+            DHT22_FEEDER: {
+              sensor_name: 'DHT22_FEEDER',
+              timestamp,
+              values: [
+                { type: 'temperature', value: 24.5, unit: '°C' },
+                { type: 'humidity', value: 65.0, unit: '%' }
+              ]
+            }
           }
-        }
-      };
+        };
     }
     
     if (endpoint.includes('/relay')) {

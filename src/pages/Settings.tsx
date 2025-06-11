@@ -97,16 +97,56 @@ const Settings = () => {
     setLoading(prev => ({ ...prev, config: true }));
     try {
       console.log("🔄 Loading configuration data...");
-      const response = await fetch('/api/control/config', { method: 'GET' }).then(res => res.json());
       
-      if (response) {
-        setConfig(response);
-        console.log("📊 Config data received:", response);
-        showMessage("success", "⚙️ โหลดการตั้งค่าสำเร็จ");
+      // Try to get configuration, but handle offline gracefully
+      try {
+        const response = await fetch('http://localhost:5000/api/control/config');
+        const data = await response.json();
+        
+        if (data && data.config) {
+          setConfig({
+            timing: {
+              sensor_read_interval: data.config.sensor_read_interval || 5,
+              firebase_sync_interval: data.config.firebase_sync_interval || 10,
+              websocket_broadcast_interval: data.config.websocket_broadcast_interval || 3,
+            },
+            feeding: {
+              auto_feed_enabled: data.config.auto_feed_enabled || false,
+              auto_feed_schedule: data.config.auto_feed_schedule || [],
+            }
+          });
+          showMessage("success", "⚙️ โหลดการตั้งค่าสำเร็จ");
+        }
+      } catch (fetchError) {
+        // API unavailable, use default config
+        setConfig({
+          timing: {
+            sensor_read_interval: 5,
+            firebase_sync_interval: 10,
+            websocket_broadcast_interval: 3,
+          },
+          feeding: {
+            auto_feed_enabled: false,
+            auto_feed_schedule: [],
+          }
+        });
+        showMessage("info", "⚙️ ใช้การตั้งค่าเริ่มต้น (ออฟไลน์)");
       }
     } catch (error) {
       console.error("Config load failed:", error);
-      showMessage("error", "❌ ไม่สามารถโหลดการตั้งค่าได้");
+      // Fallback to default config
+      setConfig({
+        timing: {
+          sensor_read_interval: 5,
+          firebase_sync_interval: 10,
+          websocket_broadcast_interval: 3,
+        },
+        feeding: {
+          auto_feed_enabled: false,
+          auto_feed_schedule: [],
+        }
+      });
+      showMessage("error", "❌ ใช้การตั้งค่าเริ่มต้น");
     } finally {
       setLoading(prev => ({ ...prev, config: false }));
     }
