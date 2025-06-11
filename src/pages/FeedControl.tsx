@@ -178,10 +178,17 @@ const FeedControl = () => {
 
         if (weightValue && typeof weightValue.value === "number") {
           setCurrentWeight(weightValue.value);
+        } else if (weightValue && weightValue.value !== undefined) {
+          // Handle cases where value might be a string or other format
+          const numericValue = parseFloat(String(weightValue.value));
+          if (!isNaN(numericValue)) {
+            setCurrentWeight(numericValue);
+          }
         }
       }
     } catch (error) {
       console.error("Failed to fetch weight:", error);
+      // Keep the current weight value, don't reset to undefined
     }
   };
 
@@ -537,7 +544,7 @@ const FeedControl = () => {
                 </span>
               </div>
               <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                {currentWeight.toFixed(1)}g
+                {(currentWeight || 0).toFixed(1)}g
               </div>
             </div>
             {lastFeedTime && (
@@ -856,7 +863,7 @@ const FeedControl = () => {
                     Average per Feed
                   </div>
                   <div className="text-2xl font-bold text-purple-900 dark:text-purple-300">
-                    {feedStatistics.average_per_feed.toFixed(1)}g
+                    {(feedStatistics?.average_per_feed || 0).toFixed(1)}g
                   </div>
                 </div>
               </div>
@@ -868,7 +875,7 @@ const FeedControl = () => {
                     Weight Change
                   </div>
                   <div className="text-lg font-bold text-yellow-900 dark:text-yellow-300">
-                    {(weightBeforeFeed - currentWeight).toFixed(1)}g dispensed
+                    {((weightBeforeFeed || 0) - (currentWeight || 0)).toFixed(1)}g dispensed
                   </div>
                 </div>
               )}
