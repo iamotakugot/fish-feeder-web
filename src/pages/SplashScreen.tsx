@@ -197,7 +197,7 @@ const SplashScreen = () => {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
-            className="mb-12"
+            className="mb-20 relative z-50"
           >
             <motion.button
               whileHover={{ 
@@ -227,22 +227,22 @@ const SplashScreen = () => {
             </motion.button>
           </motion.div>
         )}
-
-        {/* Copyright */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 3 }}
-          className="absolute bottom-4 md:bottom-8 left-1/2 transform -translate-x-1/2 text-center z-0"
-        >
-          <p className="text-xs md:text-sm text-gray-300 font-medium">
-            © 2024 Suranaree University of Technology
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            Industrial Electrical Engineering Department
-          </p>
-        </motion.div>
       </div>
+
+      {/* Copyright - Fixed at bottom */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 3 }}
+        className="absolute bottom-4 md:bottom-8 left-1/2 transform -translate-x-1/2 text-center z-10"
+      >
+        <p className="text-xs md:text-sm text-gray-300 font-medium">
+          © 2024 Suranaree University of Technology
+        </p>
+        <p className="text-xs text-gray-400 mt-1">
+          Industrial Electrical Engineering Department
+        </p>
+      </motion.div>
     </div>
   );
 };
