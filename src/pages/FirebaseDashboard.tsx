@@ -28,10 +28,10 @@ const FirebaseDashboard = () => {
   } = useFirebaseSensorData();
 
   const connectionStatus = isConnected
-    ? "✅ Firebase Connected - Live Data"
+    ? "✅ เชื่อมต่อ Firebase แล้ว - ข้อมูลสด"
     : error
-      ? `❌ Connection Failed: ${error}`
-      : "🔄 Connecting to Firebase...";
+      ? "🔌 สถานะการเชื่อมต่อ: ไม่พร้อมใช้งาน"
+      : "🔄 กำลังเชื่อมต่อกับ Firebase...";
 
   // Get current sensor values
   const values = convertFirebaseToSensorValues(sensorData);
@@ -41,18 +41,28 @@ const FirebaseDashboard = () => {
   if (!hasSensorData(sensorData) && !loading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+        <div className="text-center max-w-md">
+          <div className="text-orange-500 text-6xl mb-4">🔌</div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">
-            No Sensor Data
+            ยังไม่ได้เชื่อมต่อกับระบบ
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Unable to connect to Firebase or no data available
+          <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
+            กรุณาตรวจสอบการเชื่อมต่อกับ Firebase หรือรอข้อมูลจากระบบ
           </p>
-          <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
-            <p>Connection Status: {connectionStatus}</p>
-            {error && <p>Error: {error}</p>}
+          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg p-4 mb-4">
+            <p className="text-orange-700 dark:text-orange-300 text-sm">
+              💡 ระบบจะอัพเดทข้อมูลอัตโนมัติเมื่อเชื่อมต่อสำเร็จ
+            </p>
           </div>
+          <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
+            <p>สถานะ: {connectionStatus}</p>
+          </div>
+          <button
+            className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
+            onClick={() => window.location.reload()}
+          >
+            🔄 ลองเชื่อมต่อใหม่
+          </button>
         </div>
       </div>
     );
@@ -63,9 +73,9 @@ const FirebaseDashboard = () => {
       <div className="p-6 flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-300">Loading Dashboard...</p>
+          <p className="text-gray-600 dark:text-gray-300">กำลังโหลดแดชบอร์ด...</p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            Connecting to Firebase...
+            กำลังเชื่อมต่อกับ Firebase...
           </p>
         </div>
       </div>

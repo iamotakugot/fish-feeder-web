@@ -25,11 +25,40 @@ const FeedControl = () => {
   const [weightBeforeFeed, setWeightBeforeFeed] = useState(0);
   const [lastFeedTime, setLastFeedTime] = useState<string | null>(null);
 
-  // Device timing controls
+  // Editable preset amounts
+  const [presetAmounts, setPresetAmounts] = useState({
+    small: "50",
+    medium: "100", 
+    large: "200",
+    xl: "1000"  // 1kg option
+  });
+
+  // Preset-specific timing controls
+  const [presetTimings, setPresetTimings] = useState(() => {
+    const saved = localStorage.getItem('feedControl_presetTimings');
+    return saved ? JSON.parse(saved) : {
+      small: { actuator_up: "2", actuator_down: "1", auger_duration: "10", blower_duration: "5" },
+      medium: { actuator_up: "3", actuator_down: "2", auger_duration: "15", blower_duration: "10" },
+      large: { actuator_up: "3", actuator_down: "2", auger_duration: "20", blower_duration: "15" },
+      xl: { actuator_up: "5", actuator_down: "3", auger_duration: "30", blower_duration: "20" },
+      custom: { actuator_up: "3", actuator_down: "2", auger_duration: "20", blower_duration: "15" }
+    };
+  });
+
+  // Current active timing controls (loaded from selected preset)
   const [actuatorUp, setActuatorUp] = useState("3");
   const [actuatorDown, setActuatorDown] = useState("2");
   const [augerDuration, setAugerDuration] = useState("20");
   const [blowerDuration, setBlowerDuration] = useState("15");
+
+  // Preset timing editor state
+  const [editingPreset, setEditingPreset] = useState<string | null>(null);
+  const [tempTimings, setTempTimings] = useState({
+    actuator_up: "3",
+    actuator_down: "2", 
+    auger_duration: "20",
+    blower_duration: "15"
+  });
 
   // Automatic feeding
   const [automaticFeeding, setAutomaticFeeding] = useState(false);
@@ -93,6 +122,34 @@ const FeedControl = () => {
       clearInterval(statsInterval);
     };
   }, []);
+
+  // Save preset timings to localStorage
+  useEffect(() => {
+    localStorage.setItem('feedControl_presetTimings', JSON.stringify(presetTimings));
+  }, [presetTimings]);
+
+  // Load and save preset amounts
+  useEffect(() => {
+    const saved = localStorage.getItem('feedControl_presetAmounts');
+    if (saved) {
+      setPresetAmounts(JSON.parse(saved));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('feedControl_presetAmounts', JSON.stringify(presetAmounts));
+  }, [presetAmounts]);
+
+  // Load timing for selected preset
+  useEffect(() => {
+    if (feedType && presetTimings[feedType as keyof typeof presetTimings]) {
+      const timing = presetTimings[feedType as keyof typeof presetTimings];
+      setActuatorUp(timing.actuator_up);
+      setActuatorDown(timing.actuator_down);
+      setAugerDuration(timing.auger_duration);
+      setBlowerDuration(timing.blower_duration);
+    }
+  }, [feedType, presetTimings]);
 
   const checkConnection = async () => {
     try {
@@ -181,6 +238,7 @@ const FeedControl = () => {
       const feedRequest: FeedControlRequest = {
         action: feedType as any,
         ...(feedType === "custom" && { amount: parseInt(feedAmount) }),
+        ...(feedType !== "custom" && { amount: parseInt(getPresetAmount(feedType)) }),
         actuator_up: parseInt(actuatorUp),
         actuator_down: parseInt(actuatorDown),
         auger_duration: parseInt(augerDuration),
@@ -236,15 +294,89 @@ const FeedControl = () => {
   };
 
   const getPresetAmount = (type: string) => {
-    switch (type) {
-      case "small":
-        return "50";
-      case "medium":
-        return "100";
-      case "large":
-        return "200";
-      default:
-        return feedAmount;
+    if (type in presetAmounts) {
+      return presetAmounts[type as keyof typeof presetAmounts];
+    }
+    return feedAmount;
+  };
+
+  // Format weight display with proper units and comma separation
+  const formatWeightDisplay = (grams: string | number, showName: boolean = false, name: string = '') => {
+    const gramValue = typeof grams === 'string' ? parseInt(grams) : grams;
+    
+    // Add comma for numbers >= 1000
+    const formattedGrams = gramValue.toLocaleString();
+    
+    // Convert to kg if >= 1000g
+    if (gramValue >= 1000) {
+      const kg = gramValue / 1000;
+      // Show as whole kg if it's a round number, otherwise show decimal
+      const kgDisplay = kg % 1 === 0 ? `${kg}kg` : `${kg.toFixed(1)}kg`;
+      const weightText = `${kgDisplay} (${formattedGrams}g)`;
+      return showName ? `${name} ${weightText}` : weightText;
+    }
+    
+    const weightText = `${formattedGrams}g`;
+    return showName ? `${name} (${weightText})` : weightText;
+  };
+
+  // Get preset display label
+  const getPresetLabel = (type: string, amount: string) => {
+    if (type === "xl") {
+      return formatWeightDisplay(amount);
+    }
+    return formatWeightDisplay(amount, true, type);
+  };
+
+  // Handle preset timing editing
+  const handleEditPresetTiming = (presetType: string) => {
+    const currentTiming = presetTimings[presetType as keyof typeof presetTimings];
+    if (currentTiming) {
+      setTempTimings(currentTiming);
+      setEditingPreset(presetType);
+    }
+  };
+
+  const handleSavePresetTiming = () => {
+    if (editingPreset) {
+      setPresetTimings((prev: any) => ({
+        ...prev,
+        [editingPreset]: tempTimings
+      }));
+      setEditingPreset(null);
+    }
+  };
+
+  const handleCancelPresetTiming = () => {
+    setEditingPreset(null);
+  };
+
+  // Update current timing when user changes controls manually
+  const handleTimingChange = (field: string, value: string) => {
+    switch (field) {
+      case 'actuator_up':
+        setActuatorUp(value);
+        break;
+      case 'actuator_down':
+        setActuatorDown(value);
+        break;
+      case 'auger_duration':
+        setAugerDuration(value);
+        break;
+      case 'blower_duration':
+        setBlowerDuration(value);
+        break;
+    }
+
+    // Auto-save to current preset
+    if (feedType && presetTimings[feedType as keyof typeof presetTimings]) {
+      setPresetTimings((prev: any) => ({
+        ...prev,
+        [feedType]: {
+          ...prev[feedType as keyof typeof prev],
+          [field]: value
+        }
+      }));
     }
   };
 
@@ -301,26 +433,69 @@ const FeedControl = () => {
                 Feed Type
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {["small", "medium", "large", "custom"].map((type) => (
-                  <button
-                    key={type}
-                    className={`p-3 rounded-lg font-medium text-sm transition-colors ${
-                      feedType === type
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    }`}
-                    onClick={() => {
-                      setFeedType(type);
-                      if (type !== "custom") {
-                        setFeedAmount(getPresetAmount(type));
-                      }
-                    }}
-                  >
-                    {type === "custom"
-                      ? "Custom"
-                      : `${type} (${getPresetAmount(type)}g)`}
-                  </button>
+                {/* Editable Preset Buttons */}
+                {Object.entries(presetAmounts).map(([type, amount]) => (
+                  <div key={type} className="relative">
+                    <button
+                      className={`w-full p-3 rounded-lg font-medium text-sm transition-colors ${
+                        feedType === type
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                      }`}
+                      onClick={() => {
+                        setFeedType(type);
+                        setFeedAmount(amount);
+                      }}
+                    >
+                      {getPresetLabel(type, amount)}
+                    </button>
+                    
+                    {/* Edit buttons overlay */}
+                    <div className="absolute top-1 right-1 flex gap-1">
+                      <button
+                        className="w-5 h-5 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 opacity-70 hover:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newAmount = prompt(`Edit ${type} amount (grams):`, amount);
+                          if (newAmount && !isNaN(parseInt(newAmount))) {
+                            setPresetAmounts(prev => ({
+                              ...prev,
+                              [type]: newAmount
+                            }));
+                            if (feedType === type) {
+                              setFeedAmount(newAmount);
+                            }
+                          }
+                        }}
+                        title="Edit amount"
+                      >
+                        g
+                      </button>
+                      <button
+                        className="w-5 h-5 bg-orange-500 text-white rounded text-xs hover:bg-orange-600 opacity-70 hover:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditPresetTiming(type);
+                        }}
+                        title="Edit timing"
+                      >
+                        ⏱
+                      </button>
+                    </div>
+                  </div>
                 ))}
+                
+                {/* Custom option */}
+                <button
+                  className={`p-3 rounded-lg font-medium text-sm transition-colors ${
+                    feedType === "custom"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                  }`}
+                  onClick={() => setFeedType("custom")}
+                >
+                  Custom
+                </button>
               </div>
             </div>
 
@@ -331,15 +506,25 @@ const FeedControl = () => {
                   Amount (grams)
                 </label>
                 <Input
-                  max="500"
+                  max="2000"
                   min="10"
-                  placeholder="Enter amount"
+                  placeholder="Enter amount (e.g. 1500 for 1.5kg)"
                   type="number"
                   value={feedAmount}
                   onChange={(e) => setFeedAmount(e.target.value)}
                 />
+                {feedAmount && parseInt(feedAmount) > 0 && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Preview: {formatWeightDisplay(feedAmount)}
+                  </div>
+                )}
               </div>
             )}
+
+            {/* Edit Presets Hint */}
+            <div className="text-xs text-gray-500 dark:text-gray-400 italic">
+              💡 Click "g" to edit amount, "⏱" to edit timing controls
+            </div>
           </div>
 
           {/* Current Weight Display */}
@@ -378,7 +563,7 @@ const FeedControl = () => {
                   min="1"
                   max="30"
                   value={actuatorUp}
-                  onChange={(e) => setActuatorUp(e.target.value)}
+                  onChange={(e) => handleTimingChange('actuator_up', e.target.value)}
                   placeholder="3"
                 />
               </div>
@@ -392,7 +577,7 @@ const FeedControl = () => {
                   min="1"
                   max="30"
                   value={actuatorDown}
-                  onChange={(e) => setActuatorDown(e.target.value)}
+                  onChange={(e) => handleTimingChange('actuator_down', e.target.value)}
                   placeholder="2"
                 />
               </div>
@@ -406,7 +591,7 @@ const FeedControl = () => {
                   min="1"
                   max="60"
                   value={augerDuration}
-                  onChange={(e) => setAugerDuration(e.target.value)}
+                  onChange={(e) => handleTimingChange('auger_duration', e.target.value)}
                   placeholder="20"
                 />
               </div>
@@ -420,13 +605,51 @@ const FeedControl = () => {
                   min="1"
                   max="60"
                   value={blowerDuration}
-                  onChange={(e) => setBlowerDuration(e.target.value)}
+                  onChange={(e) => handleTimingChange('blower_duration', e.target.value)}
                   placeholder="15"
                 />
               </div>
             </div>
-            <div className="mt-3 text-xs text-orange-600 dark:text-orange-400">
-              💡 Configure device operation timing for auto-stop control
+            <div className="mt-3 flex items-center justify-between">
+              <div className="text-xs text-orange-600 dark:text-orange-400">
+                💡 Configure device operation timing for auto-stop control
+              </div>
+              <div className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                ✅ Auto-saved for {feedType}
+              </div>
+            </div>
+          </div>
+
+          {/* Live Camera Feed */}
+          <div className="bg-gray-900 rounded-lg p-4 mb-6 border border-gray-600">
+            <h3 className="text-lg font-medium text-white mb-3">
+              📹 Live Camera Feed
+            </h3>
+            <div className="aspect-video bg-gray-800 rounded-lg flex items-center justify-center mb-3">
+              <div className="text-center text-gray-400">
+                <div className="text-3xl mb-2">📹</div>
+                <div className="text-sm">Camera Stream</div>
+                <div className="text-xs mt-1">Pi Server: rtsp://pi-server:8554/stream</div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                startContent={<BsCamera />}
+                variant="bordered"
+                className="flex-1"
+                onPress={() => apiClient.takePhoto()}
+              >
+                Take Photo
+              </Button>
+              <Button
+                size="sm"
+                variant="bordered"
+                className="flex-1"
+                onPress={() => window.open('http://pi-server:8080/stream', '_blank')}
+              >
+                Open Stream
+              </Button>
             </div>
           </div>
 
@@ -440,23 +663,12 @@ const FeedControl = () => {
               startContent={<FaPlay />}
               onPress={handleFeedNow}
             >
-              Feed Now ({feedAmount}g)
+              Feed Now ({feedType === "custom" ? `${feedAmount}g` : formatWeightDisplay(getPresetAmount(feedType))})
             </Button>
             <div className="text-xs text-gray-500 dark:text-gray-400 text-center p-2 bg-gray-100 dark:bg-gray-700 rounded">
               ⚙️ actuator {actuatorUp}s↑ / {actuatorDown}s↓, auger {augerDuration}s, blower {blowerDuration}s
             </div>
           </div>
-
-          {/* Take Photo Button */}
-          <Button
-            className="w-full mt-3"
-            size="sm"
-            startContent={<BsCamera />}
-            variant="bordered"
-            onPress={() => apiClient.takePhoto()}
-          >
-            Take Photo
-          </Button>
         </div>
 
         {/* Automatic Feeding Schedule */}
@@ -702,6 +914,9 @@ const FeedControl = () => {
                   Type
                 </th>
                 <th className="text-left text-sm font-medium text-gray-700 dark:text-gray-300 pb-3">
+                  Recording
+                </th>
+                <th className="text-left text-sm font-medium text-gray-700 dark:text-gray-300 pb-3">
                   Status
                 </th>
               </tr>
@@ -731,6 +946,21 @@ const FeedControl = () => {
                       </span>
                     </td>
                     <td className="py-3 text-sm">
+                      {feed.video_url ? (
+                        <Button
+                          size="sm"
+                          variant="bordered"
+                          startContent={<BsCamera />}
+                          onPress={() => window.open(feed.video_url, '_blank')}
+                          className="text-xs"
+                        >
+                          📹 Watch
+                        </Button>
+                      ) : (
+                        <span className="text-gray-400 text-xs">No recording</span>
+                      )}
+                    </td>
+                    <td className="py-3 text-sm">
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                         Completed
                       </span>
@@ -741,7 +971,7 @@ const FeedControl = () => {
                 <tr>
                   <td
                     className="py-8 text-center text-gray-500 dark:text-gray-400"
-                    colSpan={4}
+                    colSpan={5}
                   >
                     No feed history available
                   </td>
@@ -751,6 +981,108 @@ const FeedControl = () => {
           </table>
         </div>
       </div>
+
+      {/* Preset Timing Editor Modal */}
+      {editingPreset && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              ⏱️ Edit Timing for {editingPreset.toUpperCase()}
+            </h3>
+            
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Actuator Up (s)
+                  </label>
+                  <Input
+                    type="number"
+                    size="sm"
+                    min="1"
+                    max="30"
+                    value={tempTimings.actuator_up}
+                    onChange={(e) => setTempTimings(prev => ({
+                      ...prev,
+                      actuator_up: e.target.value
+                    }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Actuator Down (s)
+                  </label>
+                  <Input
+                    type="number"
+                    size="sm"
+                    min="1"
+                    max="30"
+                    value={tempTimings.actuator_down}
+                    onChange={(e) => setTempTimings(prev => ({
+                      ...prev,
+                      actuator_down: e.target.value
+                    }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Auger Duration (s)
+                  </label>
+                  <Input
+                    type="number"
+                    size="sm"
+                    min="1"
+                    max="60"
+                    value={tempTimings.auger_duration}
+                    onChange={(e) => setTempTimings(prev => ({
+                      ...prev,
+                      auger_duration: e.target.value
+                    }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Blower Duration (s)
+                  </label>
+                  <Input
+                    type="number"
+                    size="sm"
+                    min="1"
+                    max="60"
+                    value={tempTimings.blower_duration}
+                    onChange={(e) => setTempTimings(prev => ({
+                      ...prev,
+                      blower_duration: e.target.value
+                    }))}
+                  />
+                </div>
+              </div>
+              
+              <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 p-2 rounded">
+                💡 These timing settings will be saved specifically for {editingPreset} preset
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                className="flex-1"
+                color="danger"
+                variant="bordered"
+                onPress={handleCancelPresetTiming}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                color="success"
+                onPress={handleSavePresetTiming}
+              >
+                Save Timing
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

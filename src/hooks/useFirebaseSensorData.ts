@@ -29,7 +29,7 @@ export const useFirebaseSensorData = (): UseFirebaseSensorDataReturn => {
       setError(null);
       console.log("✅ Firebase data updated:", firebaseData);
     } else {
-      setError("No data received from Firebase");
+      setError("ไม่มีข้อมูลจากระบบ");
       setIsConnected(false);
       console.log("❌ No Firebase data received");
     }
