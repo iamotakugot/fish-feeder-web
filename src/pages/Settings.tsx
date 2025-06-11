@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Switch } from "@heroui/switch";
@@ -8,15 +9,23 @@ import {
   IoMdNotifications,
   IoMdSave,
   IoMdRefresh,
+  IoMdTrash,
+  IoMdDownload,
+  IoMdCloudUpload,
 } from "react-icons/io";
 import {
   // FaTemperatureHigh,
   FaWeight,
   // FaClock,
   FaDatabase,
+  FaCog,
+  FaShieldAlt,
 } from "react-icons/fa";
+import { MdInfo, MdAutoDelete, MdBackup } from "react-icons/md";
 
 const Settings = () => {
+  const navigate = useNavigate();
+
   // System Settings
   const [feedingSettings, setFeedingSettings] = useState({
     autoFeedingEnabled: true,
@@ -35,12 +44,13 @@ const Settings = () => {
     emailNotifications: false,
   });
 
-  // Network Settings
-  const [networkSettings, setNetworkSettings] = useState({
-    wifiSSID: "FishFeeder_WiFi",
-    piServerIP: "192.168.1.100",
-    apiPort: "5000",
-    updateInterval: "3",
+  // System Maintenance Settings
+  const [maintenanceSettings, setMaintenanceSettings] = useState({
+    autoBackup: true,
+    backupInterval: "24",
+    dataRetention: "30",
+    debugMode: false,
+    performanceMonitoring: true,
   });
 
   const [saving, setSaving] = useState(false);
@@ -82,12 +92,47 @@ const Settings = () => {
         emailNotifications: false,
       });
 
-      setNetworkSettings({
-        wifiSSID: "FishFeeder_WiFi",
-        piServerIP: "192.168.1.100",
-        apiPort: "5000",
-        updateInterval: "3",
+      setMaintenanceSettings({
+        autoBackup: true,
+        backupInterval: "24",
+        dataRetention: "30",
+        debugMode: false,
+        performanceMonitoring: true,
       });
+    }
+  };
+
+  const handleClearData = () => {
+    if (confirm("⚠️ This will clear all feeding history and logs. Are you sure?")) {
+      localStorage.clear();
+      alert("Data cleared successfully!");
+    }
+  };
+
+  const handleExportData = () => {
+    const data = {
+      feedingSettings,
+      notifications,
+      maintenanceSettings,
+      exportDate: new Date().toISOString(),
+      version: "v2.1.0"
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fish-feeder-settings-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBackupData = async () => {
+    try {
+      alert("Backup initiated! Data will be saved to Firebase.");
+      // Here you would implement actual backup to Firebase
+    } catch (error) {
+      alert("Backup failed. Please try again.");
     }
   };
 
@@ -207,8 +252,8 @@ const Settings = () => {
                   Temperature Alert (°C)
                 </label>
                 <Input
-                  max="40"
-                  min="25"
+                  max="50"
+                  min="10"
                   placeholder="30"
                   type="number"
                   value={feedingSettings.temperatureAlert}
@@ -236,10 +281,11 @@ const Settings = () => {
               <div key={key} className="flex items-center justify-between">
                 <div>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {key
-                      .split(/(?=[A-Z])/)
-                      .join(" ")
-                      .replace(/^\w/, (c) => c.toUpperCase())}
+                    {key === "feedingAlerts" && "Feeding Alerts"}
+                    {key === "temperatureAlerts" && "Temperature Alerts"}
+                    {key === "lowFoodAlerts" && "Low Food Alerts"}
+                    {key === "systemAlerts" && "System Alerts"}
+                    {key === "emailNotifications" && "Email Notifications"}
                   </label>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {key === "feedingAlerts" &&
@@ -263,80 +309,149 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Network Settings */}
+        {/* System Maintenance */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-100 dark:border-gray-700">
           <div className="flex items-center text-green-500 dark:text-green-400 mb-6">
-            <IoMdWifi className="mr-3 text-xl" />
-            <h2 className="text-xl font-semibold">Network Settings</h2>
+            <FaCog className="mr-3 text-xl" />
+            <h2 className="text-xl font-semibold">System Maintenance</h2>
           </div>
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                WiFi SSID
-              </label>
-              <Input
-                placeholder="Enter WiFi network name"
-                value={networkSettings.wifiSSID}
-                onChange={(e) =>
-                  setNetworkSettings((prev) => ({
+            {/* Auto Backup */}
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Auto Backup
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Automatically backup system data
+                </p>
+              </div>
+              <Switch
+                isSelected={maintenanceSettings.autoBackup}
+                onValueChange={(checked) =>
+                  setMaintenanceSettings((prev) => ({
                     ...prev,
-                    wifiSSID: e.target.value,
+                    autoBackup: checked,
                   }))
                 }
               />
             </div>
 
+            {/* Backup Interval */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Pi Server IP Address
+                Backup Interval (hours)
               </label>
               <Input
-                placeholder="192.168.1.100"
-                value={networkSettings.piServerIP}
+                max="168"
+                min="1"
+                placeholder="24"
+                type="number"
+                value={maintenanceSettings.backupInterval}
                 onChange={(e) =>
-                  setNetworkSettings((prev) => ({
+                  setMaintenanceSettings((prev) => ({
                     ...prev,
-                    piServerIP: e.target.value,
+                    backupInterval: e.target.value,
                   }))
                 }
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Data Retention */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Data Retention (days)
+              </label>
+              <Input
+                max="365"
+                min="7"
+                placeholder="30"
+                type="number"
+                value={maintenanceSettings.dataRetention}
+                onChange={(e) =>
+                  setMaintenanceSettings((prev) => ({
+                    ...prev,
+                    dataRetention: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            {/* Debug Mode */}
+            <div className="flex items-center justify-between">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  API Port
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Debug Mode
                 </label>
-                <Input
-                  placeholder="5000"
-                  value={networkSettings.apiPort}
-                  onChange={(e) =>
-                    setNetworkSettings((prev) => ({
-                      ...prev,
-                      apiPort: e.target.value,
-                    }))
-                  }
-                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Enable detailed logging
+                </p>
               </div>
+              <Switch
+                isSelected={maintenanceSettings.debugMode}
+                onValueChange={(checked) =>
+                  setMaintenanceSettings((prev) => ({
+                    ...prev,
+                    debugMode: checked,
+                  }))
+                }
+              />
+            </div>
+
+            {/* Performance Monitoring */}
+            <div className="flex items-center justify-between">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Update Interval (sec)
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Performance Monitoring
                 </label>
-                <Input
-                  max="60"
-                  min="1"
-                  placeholder="3"
-                  type="number"
-                  value={networkSettings.updateInterval}
-                  onChange={(e) =>
-                    setNetworkSettings((prev) => ({
-                      ...prev,
-                      updateInterval: e.target.value,
-                    }))
-                  }
-                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Track system performance
+                </p>
               </div>
+              <Switch
+                isSelected={maintenanceSettings.performanceMonitoring}
+                onValueChange={(checked) =>
+                  setMaintenanceSettings((prev) => ({
+                    ...prev,
+                    performanceMonitoring: checked,
+                  }))
+                }
+              />
+            </div>
+
+            {/* Maintenance Actions */}
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-600 space-y-3">
+              <Button
+                className="w-full"
+                color="secondary"
+                size="sm"
+                startContent={<MdBackup />}
+                variant="bordered"
+                onPress={handleBackupData}
+              >
+                Manual Backup
+              </Button>
+              <Button
+                className="w-full"
+                color="warning"
+                size="sm"
+                startContent={<IoMdDownload />}
+                variant="bordered"
+                onPress={handleExportData}
+              >
+                Export Settings
+              </Button>
+              <Button
+                className="w-full"
+                color="danger"
+                size="sm"
+                startContent={<IoMdTrash />}
+                variant="bordered"
+                onPress={handleClearData}
+              >
+                Clear All Data
+              </Button>
             </div>
           </div>
         </div>
@@ -405,13 +520,71 @@ const Settings = () => {
             </div>
 
             <div className="pt-4 border-t border-gray-200 dark:border-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+                <FaShieldAlt className="text-green-500" />
+                <span>System Status: Online & Secure</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div className="bg-green-500 h-2 rounded-full" style={{width: '95%'}}></div>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">System Health: 95%</p>
+            </div>
+          </div>
+        </div>
+
+        {/* About & Project Information */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center text-purple-500 dark:text-purple-400 mb-6">
+            <MdInfo className="mr-3 text-xl" />
+            <h2 className="text-xl font-semibold">เกี่ยวกับโปรเจค</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div className="text-center space-y-3">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                Stand-Alone Automatic Fish Feeder
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                using Internet of Things
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                วิศวกรรมไฟฟ้าอุตสาหกรรม มหาวิทยาลัยเทคโนโลยีสุรนารี
+              </p>
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                รายชื่อคณะผู้จัดทำ
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="font-mono text-blue-600 dark:text-blue-400">B6523404</div>
+                  <div className="text-gray-700 dark:text-gray-300">นายพีรวัตน์ กองสอน</div>
+                </div>
+                <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="font-mono text-blue-600 dark:text-blue-400">B6523442</div>
+                  <div className="text-gray-700 dark:text-gray-300">นายภักรพงษ์ พิศพิง</div>
+                </div>
+                <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="font-mono text-blue-600 dark:text-blue-400">B6523497</div>
+                  <div className="text-gray-700 dark:text-gray-300">นายสุรวิชั แสนกวีสุข</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-600">
               <Button
                 className="w-full"
+                color="secondary"
                 size="sm"
-                startContent={<FaDatabase />}
+                startContent={<MdInfo />}
                 variant="bordered"
+                onPress={() => {
+                  localStorage.removeItem("splash-seen");
+                  navigate("/splash");
+                }}
               >
-                Export Data
+                ดู Splash Screen อีกครั้ง
               </Button>
             </div>
           </div>

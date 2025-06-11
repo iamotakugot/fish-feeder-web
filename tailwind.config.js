@@ -10,7 +10,13 @@ export default {
     "./node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        'inter': ['Inter', 'system-ui', 'sans-serif'],
+        'roboto': ['Roboto', 'system-ui', 'sans-serif'],
+        'sans': ['Inter', 'Roboto', 'system-ui', 'sans-serif']
+      }
+    },
   },
   darkMode: "class",
   plugins: [heroui()],
