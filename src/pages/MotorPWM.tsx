@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Slider } from "@heroui/slider";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
-
 import { FaSlidersH, FaArrowUp, FaArrowDown } from "react-icons/fa";
 import { HiCog } from "react-icons/hi";
 import { RiBlazeFill } from "react-icons/ri";
@@ -27,16 +26,16 @@ const MotorPWM = () => {
   const [blowerPWM, setBlowerPWM] = useState(70);
 
   // Actuator control states
-  const [actuatorMoving, setActuatorMoving] = useState<"up" | "down" | "extend" | "retract" | null>(
-    null,
-  );
+  const [actuatorMoving, setActuatorMoving] = useState<
+    "up" | "down" | "extend" | "retract" | null
+  >(null);
 
   // Pi server states
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("Ready");
   const [apiClient] = useState(new FishFeederApiClient());
 
-  // Direct command states  
+  // Direct command states
   const [customCommand, setCustomCommand] = useState("");
   const [commandResponse, setCommandResponse] = useState("");
 
@@ -150,7 +149,9 @@ const MotorPWM = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">Pi Server Status</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Pi Server Status
+            </div>
             <div
               className={`font-semibold ${
                 connectionStatus.includes("✅")
@@ -191,7 +192,9 @@ const MotorPWM = () => {
 
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
                 <div className="flex items-center justify-between">
-                  <div className="text-gray-500 dark:text-gray-400 text-sm font-medium">Current Setting</div>
+                  <div className="text-gray-500 dark:text-gray-400 text-sm font-medium">
+                    Current Setting
+                  </div>
                   <div className="text-xl font-bold text-blue-600 dark:text-blue-400">
                     {augerPWM}% ({Math.round(augerPWM * 2.55)}/255)
                   </div>
@@ -217,10 +220,10 @@ const MotorPWM = () => {
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
                 <Button
+                  className="h-12"
                   color="primary"
                   isLoading={loading}
                   size="md"
-                  className="h-12"
                   onPress={() =>
                     handleDirectCommand(`SPD:${Math.round(augerPWM * 2.55)}`)
                   }
@@ -228,28 +231,28 @@ const MotorPWM = () => {
                   Set Speed
                 </Button>
                 <Button
+                  className="h-12"
                   isLoading={loading}
                   size="md"
-                  className="h-12"
                   variant="bordered"
                   onPress={() => handleDirectCommand("G:1")}
                 >
                   Forward
                 </Button>
                 <Button
+                  className="h-12"
                   isLoading={loading}
                   size="md"
-                  className="h-12"
                   variant="bordered"
                   onPress={() => handleDirectCommand("G:2")}
                 >
                   Reverse
                 </Button>
                 <Button
+                  className="h-12"
                   color="danger"
                   isLoading={loading}
                   size="md"
-                  className="h-12"
                   variant="bordered"
                   onPress={() => handleDirectCommand("G:0")}
                 >
@@ -269,7 +272,9 @@ const MotorPWM = () => {
 
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
                 <div className="flex items-center justify-between">
-                  <div className="text-gray-500 dark:text-gray-400 text-sm font-medium">Current Setting</div>
+                  <div className="text-gray-500 dark:text-gray-400 text-sm font-medium">
+                    Current Setting
+                  </div>
                   <div className="text-xl font-bold text-blue-600 dark:text-blue-400">
                     {blowerPWM}% ({Math.round(blowerPWM * 2.55)}/255)
                   </div>
@@ -295,28 +300,28 @@ const MotorPWM = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6">
                 <Button
+                  className="h-12"
                   color="primary"
                   isLoading={loading}
                   size="md"
-                  className="h-12"
                   onPress={() => handleBlowerPWM(Math.round(blowerPWM * 2.55))}
                 >
                   Set Blower Speed (API)
                 </Button>
                 <Button
+                  className="h-12"
                   isLoading={loading}
                   size="md"
-                  className="h-12"
                   variant="bordered"
                   onPress={() => handleDirectCommand("B:1")}
                 >
                   Blower On
                 </Button>
                 <Button
+                  className="h-12"
                   color="danger"
                   isLoading={loading}
                   size="md"
-                  className="h-12"
                   variant="bordered"
                   onPress={() => handleDirectCommand("B:0")}
                 >
@@ -396,7 +401,9 @@ const MotorPWM = () => {
                   Moving {actuatorMoving.toUpperCase()}
                 </span>
               ) : (
-                <span className="text-gray-600 dark:text-gray-400">Stopped</span>
+                <span className="text-gray-600 dark:text-gray-400">
+                  Stopped
+                </span>
               )}
             </div>
           </div>

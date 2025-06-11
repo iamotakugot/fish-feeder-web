@@ -1,8 +1,4 @@
-import {
-  AllSensorsResponse,
-  SensorValue,
-  API_CONFIG,
-} from "../config/api";
+import { AllSensorsResponse, SensorValue, API_CONFIG } from "../config/api";
 
 // Type guard to check if value is a number
 export const isValidNumber = (value: any): value is number => {
@@ -136,9 +132,10 @@ export const isSensorDataFresh = (
 ): boolean => {
   if (!response) return false;
 
-  const timestamp = typeof response.timestamp === 'string' 
-    ? new Date(response.timestamp).getTime() 
-    : (response.timestamp || Date.now());
+  const timestamp =
+    typeof response.timestamp === "string"
+      ? new Date(response.timestamp).getTime()
+      : response.timestamp || Date.now();
   const age = Date.now() - timestamp;
 
   return age < 30000; // 30 seconds

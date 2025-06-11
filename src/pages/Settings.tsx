@@ -2,18 +2,18 @@ import { useState } from "react";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Switch } from "@heroui/switch";
-import { 
-  // IoMdSettings, 
-  IoMdWifi, 
+import {
+  // IoMdSettings,
+  IoMdWifi,
   IoMdNotifications,
   IoMdSave,
-  IoMdRefresh
+  IoMdRefresh,
 } from "react-icons/io";
-import { 
-  // FaTemperatureHigh, 
+import {
+  // FaTemperatureHigh,
   FaWeight,
   // FaClock,
-  FaDatabase
+  FaDatabase,
 } from "react-icons/fa";
 
 const Settings = () => {
@@ -48,13 +48,13 @@ const Settings = () => {
 
   const handleSaveSettings = async () => {
     setSaving(true);
-    
+
     try {
       // Simulate API call to save settings
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       setLastSaved(new Date().toLocaleTimeString());
-      
+
       // Show success message
       alert("Settings saved successfully!");
     } catch (error) {
@@ -73,7 +73,7 @@ const Settings = () => {
         lowFoodAlert: "20",
         temperatureAlert: "30",
       });
-      
+
       setNotifications({
         feedingAlerts: true,
         temperatureAlerts: true,
@@ -81,7 +81,7 @@ const Settings = () => {
         systemAlerts: true,
         emailNotifications: false,
       });
-      
+
       setNetworkSettings({
         wifiSSID: "FishFeeder_WiFi",
         piServerIP: "192.168.1.100",
@@ -134,7 +134,10 @@ const Settings = () => {
               <Switch
                 isSelected={feedingSettings.autoFeedingEnabled}
                 onValueChange={(checked) =>
-                  setFeedingSettings(prev => ({ ...prev, autoFeedingEnabled: checked }))
+                  setFeedingSettings((prev) => ({
+                    ...prev,
+                    autoFeedingEnabled: checked,
+                  }))
                 }
               />
             </div>
@@ -145,14 +148,17 @@ const Settings = () => {
                 Default Feed Amount (grams)
               </label>
               <Input
+                max="500"
+                min="10"
+                placeholder="100"
                 type="number"
                 value={feedingSettings.defaultFeedAmount}
                 onChange={(e) =>
-                  setFeedingSettings(prev => ({ ...prev, defaultFeedAmount: e.target.value }))
+                  setFeedingSettings((prev) => ({
+                    ...prev,
+                    defaultFeedAmount: e.target.value,
+                  }))
                 }
-                placeholder="100"
-                min="10"
-                max="500"
               />
             </div>
 
@@ -162,14 +168,17 @@ const Settings = () => {
                 Feeding Interval (hours)
               </label>
               <Input
+                max="24"
+                min="1"
+                placeholder="8"
                 type="number"
                 value={feedingSettings.feedingInterval}
                 onChange={(e) =>
-                  setFeedingSettings(prev => ({ ...prev, feedingInterval: e.target.value }))
+                  setFeedingSettings((prev) => ({
+                    ...prev,
+                    feedingInterval: e.target.value,
+                  }))
                 }
-                placeholder="8"
-                min="1"
-                max="24"
               />
             </div>
 
@@ -180,14 +189,17 @@ const Settings = () => {
                   Low Food Alert (%)
                 </label>
                 <Input
+                  max="50"
+                  min="5"
+                  placeholder="20"
                   type="number"
                   value={feedingSettings.lowFoodAlert}
                   onChange={(e) =>
-                    setFeedingSettings(prev => ({ ...prev, lowFoodAlert: e.target.value }))
+                    setFeedingSettings((prev) => ({
+                      ...prev,
+                      lowFoodAlert: e.target.value,
+                    }))
                   }
-                  placeholder="20"
-                  min="5"
-                  max="50"
                 />
               </div>
               <div>
@@ -195,14 +207,17 @@ const Settings = () => {
                   Temperature Alert (°C)
                 </label>
                 <Input
+                  max="40"
+                  min="25"
+                  placeholder="30"
                   type="number"
                   value={feedingSettings.temperatureAlert}
                   onChange={(e) =>
-                    setFeedingSettings(prev => ({ ...prev, temperatureAlert: e.target.value }))
+                    setFeedingSettings((prev) => ({
+                      ...prev,
+                      temperatureAlert: e.target.value,
+                    }))
                   }
-                  placeholder="30"
-                  min="25"
-                  max="40"
                 />
               </div>
             </div>
@@ -221,20 +236,26 @@ const Settings = () => {
               <div key={key} className="flex items-center justify-between">
                 <div>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {key.split(/(?=[A-Z])/).join(' ').replace(/^\w/, c => c.toUpperCase())}
+                    {key
+                      .split(/(?=[A-Z])/)
+                      .join(" ")
+                      .replace(/^\w/, (c) => c.toUpperCase())}
                   </label>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {key === 'feedingAlerts' && 'Get notified about feeding events'}
-                    {key === 'temperatureAlerts' && 'Alerts for temperature changes'}
-                    {key === 'lowFoodAlerts' && 'Notifications when food is low'}
-                    {key === 'systemAlerts' && 'System status notifications'}
-                    {key === 'emailNotifications' && 'Send alerts via email'}
+                    {key === "feedingAlerts" &&
+                      "Get notified about feeding events"}
+                    {key === "temperatureAlerts" &&
+                      "Alerts for temperature changes"}
+                    {key === "lowFoodAlerts" &&
+                      "Notifications when food is low"}
+                    {key === "systemAlerts" && "System status notifications"}
+                    {key === "emailNotifications" && "Send alerts via email"}
                   </p>
                 </div>
                 <Switch
                   isSelected={value}
                   onValueChange={(checked) =>
-                    setNotifications(prev => ({ ...prev, [key]: checked }))
+                    setNotifications((prev) => ({ ...prev, [key]: checked }))
                   }
                 />
               </div>
@@ -255,11 +276,14 @@ const Settings = () => {
                 WiFi SSID
               </label>
               <Input
+                placeholder="Enter WiFi network name"
                 value={networkSettings.wifiSSID}
                 onChange={(e) =>
-                  setNetworkSettings(prev => ({ ...prev, wifiSSID: e.target.value }))
+                  setNetworkSettings((prev) => ({
+                    ...prev,
+                    wifiSSID: e.target.value,
+                  }))
                 }
-                placeholder="Enter WiFi network name"
               />
             </div>
 
@@ -268,11 +292,14 @@ const Settings = () => {
                 Pi Server IP Address
               </label>
               <Input
+                placeholder="192.168.1.100"
                 value={networkSettings.piServerIP}
                 onChange={(e) =>
-                  setNetworkSettings(prev => ({ ...prev, piServerIP: e.target.value }))
+                  setNetworkSettings((prev) => ({
+                    ...prev,
+                    piServerIP: e.target.value,
+                  }))
                 }
-                placeholder="192.168.1.100"
               />
             </div>
 
@@ -282,11 +309,14 @@ const Settings = () => {
                   API Port
                 </label>
                 <Input
+                  placeholder="5000"
                   value={networkSettings.apiPort}
                   onChange={(e) =>
-                    setNetworkSettings(prev => ({ ...prev, apiPort: e.target.value }))
+                    setNetworkSettings((prev) => ({
+                      ...prev,
+                      apiPort: e.target.value,
+                    }))
                   }
-                  placeholder="5000"
                 />
               </div>
               <div>
@@ -294,14 +324,17 @@ const Settings = () => {
                   Update Interval (sec)
                 </label>
                 <Input
+                  max="60"
+                  min="1"
+                  placeholder="3"
                   type="number"
                   value={networkSettings.updateInterval}
                   onChange={(e) =>
-                    setNetworkSettings(prev => ({ ...prev, updateInterval: e.target.value }))
+                    setNetworkSettings((prev) => ({
+                      ...prev,
+                      updateInterval: e.target.value,
+                    }))
                   }
-                  placeholder="3"
-                  min="1"
-                  max="60"
                 />
               </div>
             </div>
@@ -319,40 +352,64 @@ const Settings = () => {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">App Version:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">v2.1.0</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    App Version:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    v2.1.0
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Build Date:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">2024-01-15</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Build Date:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    2024-01-15
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Database Size:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">2.4 MB</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Database Size:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    2.4 MB
+                  </span>
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Total Feeds:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">1,247</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Total Feeds:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    1,247
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Uptime:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">15 days</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Uptime:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    15 days
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Last Backup:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">Today</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Last Backup:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    Today
+                  </span>
                 </div>
               </div>
             </div>
 
             <div className="pt-4 border-t border-gray-200 dark:border-gray-600">
               <Button
-                variant="bordered"
+                className="w-full"
                 size="sm"
                 startContent={<FaDatabase />}
-                className="w-full"
+                variant="bordered"
               >
                 Export Data
               </Button>
@@ -365,8 +422,8 @@ const Settings = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-100 dark:border-gray-700">
         <div className="flex flex-col sm:flex-row gap-4 justify-end">
           <Button
-            variant="bordered"
             startContent={<IoMdRefresh />}
+            variant="bordered"
             onPress={handleResetToDefaults}
           >
             Reset to Defaults

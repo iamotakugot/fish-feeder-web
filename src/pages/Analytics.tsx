@@ -196,8 +196,8 @@ const Analytics = () => {
           <div className="flex gap-2">
             <button
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                timeRange === "24h" 
-                  ? "bg-blue-500 text-white" 
+                timeRange === "24h"
+                  ? "bg-blue-500 text-white"
                   : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
               }`}
               onClick={() => setTimeRange("24h")}
@@ -206,8 +206,8 @@ const Analytics = () => {
             </button>
             <button
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                timeRange === "7d" 
-                  ? "bg-blue-500 text-white" 
+                timeRange === "7d"
+                  ? "bg-blue-500 text-white"
                   : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
               }`}
               onClick={() => setTimeRange("7d")}
@@ -216,8 +216,8 @@ const Analytics = () => {
             </button>
             <button
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                timeRange === "30d" 
-                  ? "bg-blue-500 text-white" 
+                timeRange === "30d"
+                  ? "bg-blue-500 text-white"
                   : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
               }`}
               onClick={() => setTimeRange("30d")}
@@ -234,42 +234,42 @@ const Analytics = () => {
           🌡️ Temperature Trends
         </h2>
         <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer height="100%" width="100%">
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-              <XAxis 
-                dataKey="time" 
-                tick={{ fontSize: 12 }}
+              <CartesianGrid className="opacity-30" strokeDasharray="3 3" />
+              <XAxis
                 className="text-gray-600 dark:text-gray-400"
-              />
-              <YAxis 
+                dataKey="time"
                 tick={{ fontSize: 12 }}
-                className="text-gray-600 dark:text-gray-400"
               />
-              <Tooltip 
+              <YAxis
+                className="text-gray-600 dark:text-gray-400"
+                tick={{ fontSize: 12 }}
+              />
+              <Tooltip
                 contentStyle={{
                   backgroundColor: "rgba(0, 0, 0, 0.8)",
                   border: "none",
                   borderRadius: "8px",
-                  color: "white"
+                  color: "white",
                 }}
               />
               <Legend />
               <Line
-                type="monotone"
                 dataKey="temperature"
+                dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }}
+                name="Feeder Temp (°C)"
                 stroke="#ef4444"
                 strokeWidth={2}
-                name="Feeder Temp (°C)"
-                dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }}
+                type="monotone"
               />
               <Line
-                type="monotone"
                 dataKey="waterTemperature"
+                dot={{ fill: "#06b6d4", strokeWidth: 2, r: 4 }}
+                name="Water Temp (°C)"
                 stroke="#06b6d4"
                 strokeWidth={2}
-                name="Water Temp (°C)"
-                dot={{ fill: "#06b6d4", strokeWidth: 2, r: 4 }}
+                type="monotone"
               />
             </LineChart>
           </ResponsiveContainer>
@@ -283,42 +283,42 @@ const Analytics = () => {
             💧 Humidity & Weight
           </h2>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer height="100%" width="100%">
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis 
-                  dataKey="time" 
-                  tick={{ fontSize: 12 }}
+                <CartesianGrid className="opacity-30" strokeDasharray="3 3" />
+                <XAxis
                   className="text-gray-600 dark:text-gray-400"
-                />
-                <YAxis 
+                  dataKey="time"
                   tick={{ fontSize: 12 }}
-                  className="text-gray-600 dark:text-gray-400"
                 />
-                <Tooltip 
+                <YAxis
+                  className="text-gray-600 dark:text-gray-400"
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
                   contentStyle={{
                     backgroundColor: "rgba(0, 0, 0, 0.8)",
                     border: "none",
                     borderRadius: "8px",
-                    color: "white"
+                    color: "white",
                   }}
                 />
                 <Legend />
                 <Line
-                  type="monotone"
                   dataKey="humidity"
+                  dot={{ fill: "#3b82f6", strokeWidth: 2, r: 3 }}
+                  name="Humidity (%)"
                   stroke="#3b82f6"
                   strokeWidth={2}
-                  name="Humidity (%)"
-                  dot={{ fill: "#3b82f6", strokeWidth: 2, r: 3 }}
+                  type="monotone"
                 />
                 <Line
-                  type="monotone"
                   dataKey="weight"
+                  dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 3 }}
+                  name="Food Weight (g)"
                   stroke="#8b5cf6"
                   strokeWidth={2}
-                  name="Food Weight (g)"
-                  dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 3 }}
+                  type="monotone"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -331,42 +331,42 @@ const Analytics = () => {
             🔋 Power System
           </h2>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer height="100%" width="100%">
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis 
-                  dataKey="time" 
-                  tick={{ fontSize: 12 }}
+                <CartesianGrid className="opacity-30" strokeDasharray="3 3" />
+                <XAxis
                   className="text-gray-600 dark:text-gray-400"
-                />
-                <YAxis 
+                  dataKey="time"
                   tick={{ fontSize: 12 }}
-                  className="text-gray-600 dark:text-gray-400"
                 />
-                <Tooltip 
+                <YAxis
+                  className="text-gray-600 dark:text-gray-400"
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
                   contentStyle={{
                     backgroundColor: "rgba(0, 0, 0, 0.8)",
                     border: "none",
                     borderRadius: "8px",
-                    color: "white"
+                    color: "white",
                   }}
                 />
                 <Legend />
                 <Line
-                  type="monotone"
                   dataKey="batteryVoltage"
+                  dot={{ fill: "#10b981", strokeWidth: 2, r: 3 }}
+                  name="Battery (V)"
                   stroke="#10b981"
                   strokeWidth={2}
-                  name="Battery (V)"
-                  dot={{ fill: "#10b981", strokeWidth: 2, r: 3 }}
+                  type="monotone"
                 />
                 <Line
-                  type="monotone"
                   dataKey="solarCurrent"
+                  dot={{ fill: "#f59e0b", strokeWidth: 2, r: 3 }}
+                  name="Solar Current (A)"
                   stroke="#f59e0b"
                   strokeWidth={2}
-                  name="Solar Current (A)"
-                  dot={{ fill: "#f59e0b", strokeWidth: 2, r: 3 }}
+                  type="monotone"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -382,27 +382,47 @@ const Analytics = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div className="text-center">
             <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-              {chartData.length > 0 && Math.max(...chartData.map(d => d.temperature || 0)).toFixed(1)}°C
+              {chartData.length > 0 &&
+                Math.max(...chartData.map((d) => d.temperature || 0)).toFixed(
+                  1,
+                )}
+              °C
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Max Temperature</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Max Temperature
+            </div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {chartData.length > 0 && Math.max(...chartData.map(d => d.humidity || 0)).toFixed(0)}%
+              {chartData.length > 0 &&
+                Math.max(...chartData.map((d) => d.humidity || 0)).toFixed(0)}
+              %
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Max Humidity</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Max Humidity
+            </div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {chartData.length > 0 && Math.max(...chartData.map(d => d.batteryVoltage || 0)).toFixed(1)}V
+              {chartData.length > 0 &&
+                Math.max(
+                  ...chartData.map((d) => d.batteryVoltage || 0),
+                ).toFixed(1)}
+              V
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Max Battery</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Max Battery
+            </div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              {chartData.length > 0 && Math.min(...chartData.map(d => d.weight || 1000)).toFixed(1)}g
+              {chartData.length > 0 &&
+                Math.min(...chartData.map((d) => d.weight || 1000)).toFixed(1)}
+              g
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Min Food Weight</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Min Food Weight
+            </div>
           </div>
         </div>
       </div>
@@ -419,16 +439,16 @@ const Analytics = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <button 
+            <button
               className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
               onClick={() => alert("Export functionality coming soon!")}
             >
               📥 Export CSV
             </button>
-            <button 
+            <button
               className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
-              onClick={fetchAnalyticsData}
               disabled={loading}
+              onClick={fetchAnalyticsData}
             >
               {loading ? "🔄 Loading..." : "🔄 Refresh"}
             </button>

@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+} from "react";
 import { FaLightbulb, FaFan } from "react-icons/fa";
 import { BsLightningFill } from "react-icons/bs";
 
@@ -34,7 +40,10 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // Memoized status for preventing unnecessary updates
-  const memoizedRelayStatus = useMemo(() => relayStatus, [relayStatus.led, relayStatus.fan]);
+  const memoizedRelayStatus = useMemo(
+    () => relayStatus,
+    [relayStatus.led, relayStatus.fan],
+  );
 
   // Firebase real-time status listener with optimized updates
   const setupFirebaseListener = useCallback(() => {
@@ -71,7 +80,10 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
   const controlRelay = useCallback(
     withSubmitProtection(
       "firebase-relay",
-      async (type: "led" | "fan", action: "on" | "off" | "toggle" = "toggle") => {
+      async (
+        type: "led" | "fan",
+        action: "on" | "off" | "toggle" = "toggle",
+      ) => {
         setLoading((prev) => ({ ...prev, [type]: true }));
         setError(null);
 
@@ -85,36 +97,38 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
             throw new Error(`Failed to send ${type} command to Firebase`);
           }
         } catch (err) {
-          setError(err instanceof Error ? err.message : `${type} control failed`);
+          setError(
+            err instanceof Error ? err.message : `${type} control failed`,
+          );
         } finally {
           setLoading((prev) => ({ ...prev, [type]: false }));
         }
-      }
+      },
     ),
-    [withSubmitProtection]
+    [withSubmitProtection],
   );
 
   // Emergency shutdown with protection
   const emergencyShutdown = useCallback(
-    withSubmitProtection(
-      "emergency-shutdown",
-      async () => {
-        setLoading({ led: true, fan: true });
-        setError(null);
+    withSubmitProtection("emergency-shutdown", async () => {
+      setLoading({ led: true, fan: true });
+      setError(null);
 
-        try {
-          const success = await firebaseClient.turnOffAll();
-          if (!success) {
-            throw new Error("Emergency shutdown failed");
-          }
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Emergency shutdown failed");
-        } finally {
-          setLoading({ led: false, fan: false });
+      try {
+        const success = await firebaseClient.turnOffAll();
+
+        if (!success) {
+          throw new Error("Emergency shutdown failed");
         }
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Emergency shutdown failed",
+        );
+      } finally {
+        setLoading({ led: false, fan: false });
       }
-    ),
-    [withSubmitProtection]
+    }),
+    [withSubmitProtection],
   );
 
   // Optimized control handlers
@@ -124,7 +138,7 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
       e.stopPropagation();
       controlRelay("led", "toggle");
     },
-    [controlRelay]
+    [controlRelay],
   );
 
   const handleFanToggle = useCallback(
@@ -133,7 +147,7 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
       e.stopPropagation();
       controlRelay("fan", "toggle");
     },
-    [controlRelay]
+    [controlRelay],
   );
 
   const handleLEDOn = useCallback(
@@ -141,7 +155,7 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
       e.preventDefault();
       controlRelay("led", "on");
     },
-    [controlRelay]
+    [controlRelay],
   );
 
   const handleLEDOff = useCallback(
@@ -149,7 +163,7 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
       e.preventDefault();
       controlRelay("led", "off");
     },
-    [controlRelay]
+    [controlRelay],
   );
 
   const handleFanOn = useCallback(
@@ -157,7 +171,7 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
       e.preventDefault();
       controlRelay("fan", "on");
     },
-    [controlRelay]
+    [controlRelay],
   );
 
   const handleFanOff = useCallback(
@@ -165,7 +179,7 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
       e.preventDefault();
       controlRelay("fan", "off");
     },
-    [controlRelay]
+    [controlRelay],
   );
 
   // Initialize Firebase listener
@@ -254,7 +268,9 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
                 ? "bg-yellow-500 hover:bg-yellow-600 text-white"
                 : "bg-gray-200 hover:bg-gray-300 text-gray-700"
             } disabled:opacity-50 disabled:cursor-not-allowed`}
-            disabled={loading.led || !isOnline || isSubmitting("firebase-relay")}
+            disabled={
+              loading.led || !isOnline || isSubmitting("firebase-relay")
+            }
             onClick={handleLEDToggle}
           >
             {loading.led ? (
@@ -268,7 +284,9 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
 
           <button
             className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
-            disabled={loading.led || !isOnline || isSubmitting("firebase-relay")}
+            disabled={
+              loading.led || !isOnline || isSubmitting("firebase-relay")
+            }
             onClick={handleLEDOn}
           >
             🟢 ON
@@ -276,7 +294,9 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
 
           <button
             className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
-            disabled={loading.led || !isOnline || isSubmitting("firebase-relay")}
+            disabled={
+              loading.led || !isOnline || isSubmitting("firebase-relay")
+            }
             onClick={handleLEDOff}
           >
             🔴 OFF
@@ -313,7 +333,9 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
                 ? "bg-blue-500 hover:bg-blue-600 text-white"
                 : "bg-gray-200 hover:bg-gray-300 text-gray-700"
             } disabled:opacity-50 disabled:cursor-not-allowed`}
-            disabled={loading.fan || !isOnline || isSubmitting("firebase-relay")}
+            disabled={
+              loading.fan || !isOnline || isSubmitting("firebase-relay")
+            }
             onClick={handleFanToggle}
           >
             {loading.fan ? (
@@ -327,7 +349,9 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
 
           <button
             className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
-            disabled={loading.fan || !isOnline || isSubmitting("firebase-relay")}
+            disabled={
+              loading.fan || !isOnline || isSubmitting("firebase-relay")
+            }
             onClick={handleFanOn}
           >
             🟢 ON
@@ -335,7 +359,9 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
 
           <button
             className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
-            disabled={loading.fan || !isOnline || isSubmitting("firebase-relay")}
+            disabled={
+              loading.fan || !isOnline || isSubmitting("firebase-relay")
+            }
             onClick={handleFanOff}
           >
             🔴 OFF
@@ -347,7 +373,12 @@ const FirebaseRelayControl: React.FC<FirebaseRelayControlProps> = ({
       <div className="pt-4 border-t border-gray-200">
         <button
           className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={loading.led || loading.fan || !isOnline || isSubmitting("emergency-shutdown")}
+          disabled={
+            loading.led ||
+            loading.fan ||
+            !isOnline ||
+            isSubmitting("emergency-shutdown")
+          }
           onClick={emergencyShutdown}
         >
           🚨 Emergency Stop (All OFF)

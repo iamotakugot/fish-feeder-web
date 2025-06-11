@@ -7,7 +7,16 @@ import { HiStatusOnline } from "react-icons/hi";
 import { RiBlazeFill } from "react-icons/ri";
 import { IoMdSettings } from "react-icons/io";
 import { Input } from "@heroui/input";
-import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line } from "recharts";
+import {
+  ResponsiveContainer,
+  LineChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  Line,
+} from "recharts";
 
 import {
   API_CONFIG,
@@ -199,12 +208,38 @@ const FanTempControl = () => {
     try {
       // Mock temperature history data
       const mockHistory = [
-        { time: "12:00", feederTemp: 25, systemTemp: 23, threshold: tempThreshold },
-        { time: "13:00", feederTemp: 26, systemTemp: 24, threshold: tempThreshold },
-        { time: "14:00", feederTemp: 28, systemTemp: 25, threshold: tempThreshold },
-        { time: "15:00", feederTemp: 30, systemTemp: 27, threshold: tempThreshold },
-        { time: "16:00", feederTemp: 32, systemTemp: 29, threshold: tempThreshold },
+        {
+          time: "12:00",
+          feederTemp: 25,
+          systemTemp: 23,
+          threshold: tempThreshold,
+        },
+        {
+          time: "13:00",
+          feederTemp: 26,
+          systemTemp: 24,
+          threshold: tempThreshold,
+        },
+        {
+          time: "14:00",
+          feederTemp: 28,
+          systemTemp: 25,
+          threshold: tempThreshold,
+        },
+        {
+          time: "15:00",
+          feederTemp: 30,
+          systemTemp: 27,
+          threshold: tempThreshold,
+        },
+        {
+          time: "16:00",
+          feederTemp: 32,
+          systemTemp: 29,
+          threshold: tempThreshold,
+        },
       ];
+
       setTempHistory(mockHistory);
     } catch (error) {
       console.error("Failed to load temperature history:", error);
@@ -234,7 +269,9 @@ const FanTempControl = () => {
           <div className="flex items-center">
             <HiStatusOnline className="mr-2 text-green-500" />
             <div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Connection Status</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Connection Status
+              </div>
               <div
                 className={`font-semibold ${
                   connectionStatus.includes("✅")
@@ -263,7 +300,9 @@ const FanTempControl = () => {
                 System Temperature
               </span>
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">DHT22_SYSTEM</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              DHT22_SYSTEM
+            </div>
           </div>
           <div className="text-3xl font-bold text-red-600 dark:text-red-400">
             {systemTemperature.toFixed(1)}°C
@@ -282,7 +321,9 @@ const FanTempControl = () => {
                 Feeder Temperature
               </span>
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">DHT22_FEEDER</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              DHT22_FEEDER
+            </div>
           </div>
           <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
             {feederTemperature.toFixed(1)}°C
@@ -314,10 +355,10 @@ const FanTempControl = () => {
                 </div>
               </div>
               <Switch
-                isSelected={autoFanMode}
-                onValueChange={setAutoFanMode}
-                size="lg"
                 color="primary"
+                isSelected={autoFanMode}
+                size="lg"
+                onValueChange={setAutoFanMode}
               />
             </div>
 
@@ -332,16 +373,16 @@ const FanTempControl = () => {
                 </span>
               </div>
               <Slider
-                size="lg"
-                step={0.5}
-                marks={temperatureMarks}
-                minValue={20}
-                maxValue={40}
-                value={temperatureThreshold}
-                onChange={(value) => setTemperatureThreshold(value as number)}
                 className="w-full"
                 color="warning"
                 isDisabled={!autoFanMode}
+                marks={temperatureMarks}
+                maxValue={40}
+                minValue={20}
+                size="lg"
+                step={0.5}
+                value={temperatureThreshold}
+                onChange={(value) => setTemperatureThreshold(value as number)}
               />
               <div className="text-xs text-gray-500 dark:text-gray-400">
                 Fan will start when temperature exceeds this threshold
@@ -355,12 +396,12 @@ const FanTempControl = () => {
                   Manual Fan Control
                 </label>
                 <Button
-                  size="lg"
+                  className="w-full"
                   color={fanStatus ? "danger" : "primary"}
+                  isLoading={loading}
+                  size="lg"
                   variant={fanStatus ? "solid" : "bordered"}
                   onPress={handleManualFanToggle}
-                  isLoading={loading}
-                  className="w-full"
                 >
                   <FaFan className="mr-2" />
                   {fanStatus ? "Turn Fan OFF" : "Turn Fan ON"}
@@ -379,15 +420,15 @@ const FanTempControl = () => {
                 </span>
               </div>
               <Slider
-                size="lg"
-                step={5}
-                marks={speedMarks}
-                minValue={0}
-                maxValue={255}
-                value={blowerSpeed}
-                onChange={(value) => handleSpeedChange(value as number)}
                 className="w-full"
                 color="primary"
+                marks={speedMarks}
+                maxValue={255}
+                minValue={0}
+                size="lg"
+                step={5}
+                value={blowerSpeed}
+                onChange={(value) => handleSpeedChange(value as number)}
               />
               <div className="text-xs text-gray-500 dark:text-gray-400">
                 PWM speed control (0-255)
@@ -401,9 +442,7 @@ const FanTempControl = () => {
             <div className="p-6 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
               <FaFan
                 className={`mx-auto text-6xl mb-4 ${
-                  fanStatus
-                    ? "text-green-500 animate-spin"
-                    : "text-gray-400"
+                  fanStatus ? "text-green-500 animate-spin" : "text-gray-400"
                 }`}
               />
               <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
@@ -417,24 +456,24 @@ const FanTempControl = () => {
             {/* Quick Actions */}
             <div className="space-y-3">
               <Button
-                size="sm"
+                className="w-full"
                 color="secondary"
+                isLoading={loading}
+                size="sm"
                 variant="bordered"
                 onPress={() => fetchTemperatureData()}
-                isLoading={loading}
-                className="w-full"
               >
                 <HiStatusOnline className="mr-2" />
                 Refresh Temperature
               </Button>
-              
+
               <Button
-                size="sm"
+                className="w-full"
                 color="warning"
+                isLoading={loading}
+                size="sm"
                 variant="bordered"
                 onPress={() => handleBlowerControl("stop")}
-                isLoading={loading}
-                className="w-full"
               >
                 <RiBlazeFill className="mr-2" />
                 Emergency Stop
@@ -448,7 +487,9 @@ const FanTempControl = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
         <div className="flex items-center text-purple-500 dark:text-purple-400 mb-6">
           <IoMdSettings className="mr-2 text-xl" />
-          <span className="text-lg font-medium">Advanced Temperature Settings</span>
+          <span className="text-lg font-medium">
+            Advanced Temperature Settings
+          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -457,13 +498,13 @@ const FanTempControl = () => {
               Temperature Threshold (°C)
             </label>
             <Input
+              max={50}
+              min={20}
+              size="sm"
+              step={0.5}
               type="number"
               value={tempThreshold.toString()}
               onChange={(e) => setTempThreshold(Number(e.target.value))}
-              min={20}
-              max={50}
-              step={0.5}
-              size="sm"
             />
           </div>
 
@@ -472,13 +513,13 @@ const FanTempControl = () => {
               Hysteresis (°C)
             </label>
             <Input
+              max={5}
+              min={0.5}
+              size="sm"
+              step={0.5}
               type="number"
               value={hysteresis.toString()}
               onChange={(e) => setHysteresis(Number(e.target.value))}
-              min={0.5}
-              max={5}
-              step={0.5}
-              size="sm"
             />
           </div>
 
@@ -487,13 +528,13 @@ const FanTempControl = () => {
               Update Interval (seconds)
             </label>
             <Input
+              max={60}
+              min={1}
+              size="sm"
+              step={1}
               type="number"
               value={updateInterval.toString()}
               onChange={(e) => setUpdateInterval(Number(e.target.value))}
-              min={1}
-              max={60}
-              step={1}
-              size="sm"
             />
           </div>
         </div>
@@ -505,7 +546,7 @@ const FanTempControl = () => {
           Temperature History
         </h3>
         <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer height="100%" width="100%">
             <LineChart data={tempHistory}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="time" />
@@ -513,26 +554,26 @@ const FanTempControl = () => {
               <Tooltip />
               <Legend />
               <Line
-                type="monotone"
                 dataKey="feederTemp"
+                name="Feeder Temp"
                 stroke="#f59e0b"
                 strokeWidth={2}
-                name="Feeder Temp"
+                type="monotone"
               />
               <Line
-                type="monotone"
                 dataKey="systemTemp"
+                name="System Temp"
                 stroke="#ef4444"
                 strokeWidth={2}
-                name="System Temp"
+                type="monotone"
               />
               <Line
-                type="monotone"
                 dataKey="threshold"
-                stroke="#8b5cf6"
-                strokeWidth={2}
-                strokeDasharray="5 5"
                 name="Threshold"
+                stroke="#8b5cf6"
+                strokeDasharray="5 5"
+                strokeWidth={2}
+                type="monotone"
               />
             </LineChart>
           </ResponsiveContainer>
@@ -542,4 +583,4 @@ const FanTempControl = () => {
   );
 };
 
-export default FanTempControl; 
+export default FanTempControl;

@@ -1,10 +1,10 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback } from "react";
 
 interface UsePreventDoubleSubmitReturn {
   isSubmitting: (key: string) => boolean;
   withSubmitProtection: <T extends any[]>(
     key: string,
-    fn: (...args: T) => Promise<any> | any
+    fn: (...args: T) => Promise<any> | any,
   ) => (...args: T) => Promise<void>;
 }
 
@@ -16,14 +16,14 @@ export const usePreventDoubleSubmit = (): UsePreventDoubleSubmitReturn => {
   }, []);
 
   const withSubmitProtection = useCallback(
-    <T extends any[]>(
-      key: string,
-      fn: (...args: T) => Promise<any> | any
-    ) => {
+    <T extends any[]>(key: string, fn: (...args: T) => Promise<any> | any) => {
       return async (...args: T): Promise<void> => {
         // Prevent double submit
         if (submittingKeysRef.current.has(key)) {
-          console.warn(`⚠️ ${key} already in progress, ignoring duplicate request`);
+          console.warn(
+            `⚠️ ${key} already in progress, ignoring duplicate request`,
+          );
+
           return;
         }
 
@@ -38,11 +38,11 @@ export const usePreventDoubleSubmit = (): UsePreventDoubleSubmitReturn => {
         }
       };
     },
-    []
+    [],
   );
 
   return {
     isSubmitting,
     withSubmitProtection,
   };
-}; 
+};

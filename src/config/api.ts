@@ -56,10 +56,10 @@ export const API_CONFIG = {
   // Optimized timeouts for better performance
   TIMEOUT: 5000, // Increased from 300ms to 5s for stability
   FAST_TIMEOUT: 1000, // For quick operations
-  
+
   // Cache settings
   CACHE_DURATION: 30000, // 30 seconds cache for sensor data
-  
+
   // Retry settings
   MAX_RETRIES: 3,
   RETRY_DELAY: 1000, // 1 second
@@ -76,7 +76,7 @@ export const API_CONFIG = {
   SENSOR_NAMES: {
     // Temperature sensors
     DHT22_SYSTEM: "DHT22_SYSTEM",
-    DHT22_FEEDER: "DHT22_FEEDER", 
+    DHT22_FEEDER: "DHT22_FEEDER",
     DS18B20_WATER_TEMP: "DS18B20_WATER_TEMP",
 
     // Weight sensors
@@ -118,10 +118,15 @@ class SimpleCache {
   private cache = new Map<string, { data: any; timestamp: number }>();
   private maxSize = 100; // Prevent memory leaks
 
-  set(key: string, data: any, duration: number = API_CONFIG.CACHE_DURATION): void {
+  set(
+    key: string,
+    data: any,
+    duration: number = API_CONFIG.CACHE_DURATION,
+  ): void {
     // Clean old entries if cache is full
     if (this.cache.size >= this.maxSize) {
       const oldestKey = this.cache.keys().next().value;
+
       if (oldestKey) {
         this.cache.delete(oldestKey);
       }
@@ -135,10 +140,12 @@ class SimpleCache {
 
   get(key: string): any | null {
     const entry = this.cache.get(key);
+
     if (!entry) return null;
 
     if (Date.now() > entry.timestamp) {
       this.cache.delete(key);
+
       return null;
     }
 
@@ -151,10 +158,12 @@ class SimpleCache {
 
   has(key: string): boolean {
     const entry = this.cache.get(key);
+
     if (!entry) return false;
 
     if (Date.now() > entry.timestamp) {
       this.cache.delete(key);
+
       return false;
     }
 
@@ -172,7 +181,7 @@ export class ApiError extends Error {
 
   constructor(message: string, status: number, endpoint: string) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = status;
     this.endpoint = endpoint;
   }
@@ -183,7 +192,7 @@ const withTimeout = <T>(promise: Promise<T>, timeout: number): Promise<T> => {
   return Promise.race([
     promise,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Request timeout')), timeout)
+      setTimeout(() => reject(new Error("Request timeout")), timeout),
     ),
   ]);
 };
@@ -192,7 +201,7 @@ const withTimeout = <T>(promise: Promise<T>, timeout: number): Promise<T> => {
 const withRetry = async <T>(
   fn: () => Promise<T>,
   maxRetries: number = API_CONFIG.MAX_RETRIES,
-  delay: number = API_CONFIG.RETRY_DELAY
+  delay: number = API_CONFIG.RETRY_DELAY,
 ): Promise<T> => {
   let lastError: Error;
 
@@ -201,12 +210,13 @@ const withRetry = async <T>(
       return await fn();
     } catch (error) {
       lastError = error as Error;
-      
+
       if (i === maxRetries) break;
-      
+
       // Exponential backoff
       const waitTime = delay * Math.pow(2, i);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
+
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
     }
   }
 
@@ -306,13 +316,13 @@ export class FishFeederApiClient {
     endpoint: string,
     options: RequestInit = {},
     useCache: boolean = true,
-    timeout: number = API_CONFIG.TIMEOUT
+    timeout: number = API_CONFIG.TIMEOUT,
   ): Promise<any> {
     const url = `${this.baseURL}${endpoint}`;
-    const cacheKey = `${options.method || 'GET'}:${url}`;
+    const cacheKey = `${options.method || "GET"}:${url}`;
 
     // Check cache for GET requests
-    if (options.method !== 'POST' && useCache && apiCache.has(cacheKey)) {
+    if (options.method !== "POST" && useCache && apiCache.has(cacheKey)) {
       return apiCache.get(cacheKey);
     }
 
@@ -320,14 +330,14 @@ export class FishFeederApiClient {
     if (this.abortController) {
       this.abortController.abort();
     }
-    
+
     this.abortController = new AbortController();
 
     const fetchOptions: RequestInit = {
       ...options,
       signal: this.abortController.signal,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...options.headers,
       },
     };
@@ -335,29 +345,29 @@ export class FishFeederApiClient {
     try {
       const response = await withTimeout(
         withRetry(() => fetch(url, fetchOptions)),
-        timeout
+        timeout,
       );
 
       if (!response.ok) {
         throw new ApiError(
           `HTTP ${response.status}: ${response.statusText}`,
           response.status,
-          endpoint
+          endpoint,
         );
       }
 
       const data = await response.json();
 
       // Cache successful GET responses
-      if (options.method !== 'POST' && useCache && data.status === 'success') {
+      if (options.method !== "POST" && useCache && data.status === "success") {
         apiCache.set(cacheKey, data);
       }
 
       return data;
     } catch (error) {
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          throw new ApiError('Request was cancelled', 0, endpoint);
+        if (error.name === "AbortError") {
+          throw new ApiError("Request was cancelled", 0, endpoint);
         }
         throw new ApiError(error.message, 0, endpoint);
       }
@@ -371,7 +381,7 @@ export class FishFeederApiClient {
       API_CONFIG.ENDPOINTS.HEALTH,
       { method: API_CONFIG.METHODS.GET },
       false, // Don't cache health checks
-      API_CONFIG.FAST_TIMEOUT
+      API_CONFIG.FAST_TIMEOUT,
     );
   }
 
@@ -381,7 +391,7 @@ export class FishFeederApiClient {
       API_CONFIG.ENDPOINTS.SENSORS,
       { method: API_CONFIG.METHODS.GET },
       true, // Use cache for sensor data
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 
@@ -391,7 +401,7 @@ export class FishFeederApiClient {
       `${API_CONFIG.ENDPOINTS.SENSOR_BY_NAME}/${sensorName}`,
       { method: API_CONFIG.METHODS.GET },
       true,
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 
@@ -401,25 +411,29 @@ export class FishFeederApiClient {
       API_CONFIG.ENDPOINTS.RELAY_STATUS,
       { method: API_CONFIG.METHODS.GET },
       false, // Don't cache relay status
-      API_CONFIG.FAST_TIMEOUT
+      API_CONFIG.FAST_TIMEOUT,
     );
   }
 
-  async controlLED(action: 'on' | 'off' | 'toggle'): Promise<RelayStatusResponse> {
+  async controlLED(
+    action: "on" | "off" | "toggle",
+  ): Promise<RelayStatusResponse> {
     return this.enhancedFetch(
       `${API_CONFIG.ENDPOINTS.RELAY_LED}/${action}`,
       { method: API_CONFIG.METHODS.POST },
       false,
-      API_CONFIG.FAST_TIMEOUT
+      API_CONFIG.FAST_TIMEOUT,
     );
   }
 
-  async controlFan(action: 'on' | 'off' | 'toggle'): Promise<RelayStatusResponse> {
+  async controlFan(
+    action: "on" | "off" | "toggle",
+  ): Promise<RelayStatusResponse> {
     return this.enhancedFetch(
       `${API_CONFIG.ENDPOINTS.RELAY_FAN}/${action}`,
       { method: API_CONFIG.METHODS.POST },
       false,
-      API_CONFIG.FAST_TIMEOUT
+      API_CONFIG.FAST_TIMEOUT,
     );
   }
 
@@ -429,7 +443,7 @@ export class FishFeederApiClient {
       `${API_CONFIG.ENDPOINTS.CONTROL_ULTRA}/${relayId}`,
       { method: API_CONFIG.METHODS.POST },
       false,
-      API_CONFIG.FAST_TIMEOUT
+      API_CONFIG.FAST_TIMEOUT,
     );
   }
 
@@ -442,7 +456,7 @@ export class FishFeederApiClient {
         body: JSON.stringify(request),
       },
       false,
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 
@@ -454,7 +468,7 @@ export class FishFeederApiClient {
         body: JSON.stringify(request),
       },
       false,
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 
@@ -466,7 +480,7 @@ export class FishFeederApiClient {
         body: JSON.stringify(request),
       },
       false,
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 
@@ -476,7 +490,7 @@ export class FishFeederApiClient {
       API_CONFIG.ENDPOINTS.FEED_HISTORY,
       { method: API_CONFIG.METHODS.GET },
       true, // Cache feed history
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 
@@ -485,7 +499,7 @@ export class FishFeederApiClient {
       API_CONFIG.ENDPOINTS.FEED_STATISTICS,
       { method: API_CONFIG.METHODS.GET },
       true, // Cache statistics
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 
@@ -495,7 +509,7 @@ export class FishFeederApiClient {
       API_CONFIG.ENDPOINTS.SYNC,
       { method: API_CONFIG.METHODS.POST },
       false,
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 
@@ -525,7 +539,7 @@ export class FishFeederApiClient {
         body: JSON.stringify(request),
       },
       false,
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 
@@ -537,7 +551,7 @@ export class FishFeederApiClient {
         body: JSON.stringify(request),
       },
       false,
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 
@@ -546,7 +560,7 @@ export class FishFeederApiClient {
       API_CONFIG.ENDPOINTS.WEIGHT_TARE,
       { method: API_CONFIG.METHODS.POST },
       false,
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 
@@ -555,7 +569,7 @@ export class FishFeederApiClient {
       API_CONFIG.ENDPOINTS.PHOTO,
       { method: API_CONFIG.METHODS.POST },
       false,
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 
@@ -564,7 +578,7 @@ export class FishFeederApiClient {
       API_CONFIG.ENDPOINTS.RECORD_START,
       { method: API_CONFIG.METHODS.POST },
       false,
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 
@@ -573,7 +587,7 @@ export class FishFeederApiClient {
       API_CONFIG.ENDPOINTS.RECORD_STOP,
       { method: API_CONFIG.METHODS.POST },
       false,
-      API_CONFIG.TIMEOUT
+      API_CONFIG.TIMEOUT,
     );
   }
 }

@@ -4,36 +4,37 @@ import { IoWaterOutline } from "react-icons/io5";
 import { BiBattery } from "react-icons/bi";
 import { BsLightningCharge, BsCamera } from "react-icons/bs";
 
-import { API_CONFIG } from "../config/api";
-import { useSmartSensorData } from "../hooks/useSmartSensorData";
+import { useFirebaseSensorData } from "../hooks/useFirebaseSensorData";
 import {
-  getCurrentSensorValues,
+  convertFirebaseToSensorValues,
   formatSensorValue,
   getSensorStatusClass,
-} from "../utils/sensorUtils";
+  hasSensorData,
+  getSensorSummary,
+} from "../utils/firebaseSensorUtils";
 import FirebaseRelayControl from "../components/FirebaseRelayControl";
+import { API_CONFIG } from "../config/api";
 
 const Dashboard = () => {
   const {
-    data: sensorsData,
+    sensorData,
     loading,
     error,
     lastUpdate,
     isConnected,
-    refetch,
-  } = useSmartSensorData();
+  } = useFirebaseSensorData();
 
   const connectionStatus = isConnected
-    ? "✅ Pi Connected - Live Data"
+    ? "✅ Firebase Connected - Live Data"
     : error
       ? `❌ Connection Failed: ${error}`
       : "🔄 Connecting...";
 
   // Get current sensor values using utility function
-  const values = getCurrentSensorValues(sensorsData);
+  const values = convertFirebaseToSensorValues(sensorData);
 
   // Show error state if no data available
-  if (!values) {
+  if (!hasSensorData(sensorData)) {
     return (
       <div className="p-6 flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -41,10 +42,10 @@ const Dashboard = () => {
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             No Sensor Data
           </h2>
-          <p className="text-gray-600 mb-4">Unable to connect to Pi server</p>
+          <p className="text-gray-600 mb-4">Unable to connect to Firebase</p>
           <button
             className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-            onClick={refetch}
+            onClick={() => window.location.reload()}
           >
             Retry Connection
           </button>
@@ -94,11 +95,11 @@ const Dashboard = () => {
         </div>
 
         <div className="text-sm text-gray-600 dark:text-gray-300">
-          <strong>API:</strong> {API_CONFIG.BASE_URL} |
+          <strong>Source:</strong> Firebase Realtime Database |
           <strong
             className={`ml-2 ${isConnected ? "text-green-600 dark:text-green-400" : "text-orange-600 dark:text-orange-400"}`}
           >
-            {isConnected ? "Live Pi Data" : "Disconnected"}
+            {isConnected ? "Live Firebase Data" : "Disconnected"}
           </strong>
           {loading && (
             <span className="ml-2 text-blue-500 dark:text-blue-400">🔄 Updating...</span>

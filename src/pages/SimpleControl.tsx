@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import { MdDining, MdSchedule, MdHistory } from "react-icons/md";
 import { IoMdSettings } from "react-icons/io";
 import { HiCog } from "react-icons/hi";
@@ -13,6 +12,7 @@ const SimpleControl = () => {
 
   const handleFeedNow = () => {
     const now = new Date();
+
     setLastFeedTime(now.toLocaleTimeString());
     // Add feed logic here
     console.log("Manual feed triggered at", now.toLocaleTimeString());
@@ -105,16 +105,28 @@ const SimpleControl = () => {
             </div>
             <div className="space-y-3 mb-6">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-300">Food Level</span>
-                <span className="font-semibold text-green-600 dark:text-green-400">75%</span>
+                <span className="text-gray-600 dark:text-gray-300">
+                  Food Level
+                </span>
+                <span className="font-semibold text-green-600 dark:text-green-400">
+                  75%
+                </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-300">Water Temp</span>
-                <span className="font-semibold text-blue-600 dark:text-blue-400">24°C</span>
+                <span className="text-gray-600 dark:text-gray-300">
+                  Water Temp
+                </span>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                  24°C
+                </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-300">Next Feed</span>
-                <span className="font-semibold text-orange-600 dark:text-orange-400">18:00</span>
+                <span className="text-gray-600 dark:text-gray-300">
+                  Next Feed
+                </span>
+                <span className="font-semibold text-orange-600 dark:text-orange-400">
+                  18:00
+                </span>
               </div>
             </div>
             <Button
@@ -137,32 +149,32 @@ const SimpleControl = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Button
               className="h-16 text-base"
-              variant="bordered"
               startContent={<FaFish />}
+              variant="bordered"
               onPress={() => navigate("/dashboard")}
             >
               Dashboard
             </Button>
             <Button
               className="h-16 text-base"
-              variant="bordered"
               startContent={<IoMdSettings />}
+              variant="bordered"
               onPress={() => navigate("/settings")}
             >
               Settings
             </Button>
             <Button
               className="h-16 text-base"
-              variant="bordered"
               startContent={<MdHistory />}
+              variant="bordered"
               onPress={() => navigate("/logs")}
             >
               Feed Logs
             </Button>
             <Button
               className="h-16 text-base"
-              variant="bordered"
               startContent={<HiCog />}
+              variant="bordered"
               onPress={() => navigate("/motor-pwm")}
             >
               Motor Control
@@ -179,24 +191,36 @@ const SimpleControl = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-600">
                 <div className="flex items-center">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-                  <span className="text-gray-700 dark:text-gray-200">Auto feed completed</span>
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-3" />
+                  <span className="text-gray-700 dark:text-gray-200">
+                    Auto feed completed
+                  </span>
                 </div>
-                <span className="text-sm text-gray-500 dark:text-gray-400">2 hours ago</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  2 hours ago
+                </span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-600">
                 <div className="flex items-center">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                  <span className="text-gray-700 dark:text-gray-200">Schedule updated</span>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-3" />
+                  <span className="text-gray-700 dark:text-gray-200">
+                    Schedule updated
+                  </span>
                 </div>
-                <span className="text-sm text-gray-500 dark:text-gray-400">1 day ago</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  1 day ago
+                </span>
               </div>
               <div className="flex items-center justify-between py-2">
                 <div className="flex items-center">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full mr-3"></div>
-                  <span className="text-gray-700 dark:text-gray-200">Manual feed triggered</span>
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full mr-3" />
+                  <span className="text-gray-700 dark:text-gray-200">
+                    Manual feed triggered
+                  </span>
                 </div>
-                <span className="text-sm text-gray-500 dark:text-gray-400">2 days ago</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  2 days ago
+                </span>
               </div>
             </div>
           </div>

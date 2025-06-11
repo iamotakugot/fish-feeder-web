@@ -255,19 +255,21 @@ const FeedControl = () => {
                 {["small", "medium", "large", "custom"].map((type) => (
                   <button
                     key={type}
+                    className={`p-3 rounded-lg font-medium text-sm transition-colors ${
+                      feedType === type
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    }`}
                     onClick={() => {
                       setFeedType(type);
                       if (type !== "custom") {
                         setFeedAmount(getPresetAmount(type));
                       }
                     }}
-                    className={`p-3 rounded-lg font-medium text-sm transition-colors ${
-                      feedType === type
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    }`}
                   >
-                    {type === "custom" ? "Custom" : `${type} (${getPresetAmount(type)}g)`}
+                    {type === "custom"
+                      ? "Custom"
+                      : `${type} (${getPresetAmount(type)}g)`}
                   </button>
                 ))}
               </div>
@@ -280,12 +282,12 @@ const FeedControl = () => {
                   Amount (grams)
                 </label>
                 <Input
+                  max="500"
+                  min="10"
+                  placeholder="Enter amount"
                   type="number"
                   value={feedAmount}
                   onChange={(e) => setFeedAmount(e.target.value)}
-                  placeholder="Enter amount"
-                  min="10"
-                  max="500"
                 />
               </div>
             )}
@@ -313,22 +315,22 @@ const FeedControl = () => {
 
           {/* Feed Button */}
           <Button
-            color="primary"
-            size="lg"
-            isLoading={loading}
-            onPress={handleFeedNow}
             className="w-full h-12 text-lg font-medium"
+            color="primary"
+            isLoading={loading}
+            size="lg"
             startContent={<FaPlay />}
+            onPress={handleFeedNow}
           >
             Feed Now ({feedAmount}g)
           </Button>
 
           {/* Take Photo Button */}
           <Button
-            variant="bordered"
-            size="sm"
             className="w-full mt-3"
+            size="sm"
             startContent={<BsCamera />}
+            variant="bordered"
             onPress={() => apiClient.takePhoto()}
           >
             Take Photo
@@ -364,11 +366,11 @@ const FeedControl = () => {
                   </div>
                 </div>
                 <Button
+                  isIconOnly
+                  color="danger"
                   size="sm"
                   variant="light"
-                  color="danger"
                   onPress={() => handleRemoveSchedule(index)}
-                  isIconOnly
                 >
                   <BsTrash />
                 </Button>
@@ -384,10 +386,10 @@ const FeedControl = () => {
                   Time
                 </label>
                 <Input
+                  size="sm"
                   type="time"
                   value={newScheduleTime}
                   onChange={(e) => setNewScheduleTime(e.target.value)}
-                  size="sm"
                 />
               </div>
               <div>
@@ -395,22 +397,22 @@ const FeedControl = () => {
                   Amount (g)
                 </label>
                 <Input
+                  max="500"
+                  min="10"
+                  placeholder="100"
+                  size="sm"
                   type="number"
                   value={newScheduleAmount}
                   onChange={(e) => setNewScheduleAmount(e.target.value)}
-                  placeholder="100"
-                  min="10"
-                  max="500"
-                  size="sm"
                 />
               </div>
             </div>
             <Button
+              className="w-full"
               color="success"
               size="sm"
-              onPress={handleAddSchedule}
-              className="w-full"
               startContent={<BsPlus />}
+              onPress={handleAddSchedule}
             >
               Add Schedule
             </Button>
@@ -546,8 +548,8 @@ const FeedControl = () => {
               ) : (
                 <tr>
                   <td
-                    colSpan={4}
                     className="py-8 text-center text-gray-500 dark:text-gray-400"
+                    colSpan={4}
                   >
                     No feed history available
                   </td>

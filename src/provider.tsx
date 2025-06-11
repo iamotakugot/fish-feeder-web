@@ -1,6 +1,6 @@
 import type { NavigateOptions } from "react-router-dom";
-import { useEffect, useState } from "react";
 
+import { useEffect, useState } from "react";
 import { HeroUIProvider } from "@heroui/system";
 import { useHref, useNavigate } from "react-router-dom";
 
@@ -29,11 +29,7 @@ export function Provider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <HeroUIProvider 
-      locale="th-TH" 
-      navigate={navigate} 
-      useHref={useHref}
-    >
+    <HeroUIProvider locale="th-TH" navigate={navigate} useHref={useHref}>
       {children}
     </HeroUIProvider>
   );

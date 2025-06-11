@@ -1,6 +1,7 @@
 import { FC, useState, useEffect } from "react";
 import { Switch } from "@heroui/switch";
 import { useTheme } from "@heroui/use-theme";
+
 import { SunFilledIcon, MoonFilledIcon } from "@/components/icons";
 
 export interface ThemeSwitchProps {
@@ -18,7 +19,9 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({ className = "" }) => {
   // Prevent hydration mismatch
   if (!isMounted) {
     return (
-      <div className={`w-12 h-6 bg-gray-300 rounded-full animate-pulse ${className}`} />
+      <div
+        className={`w-12 h-6 bg-gray-300 rounded-full animate-pulse ${className}`}
+      />
     );
   }
 
@@ -31,22 +34,22 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({ className = "" }) => {
       <div className="flex items-center text-sm text-gray-500">
         <MoonFilledIcon size={16} />
       </div>
-      
+
       <Switch
-        isSelected={theme === "light"}
-        onValueChange={handleThemeChange}
-        size="sm"
-        color="primary"
-        startContent={<MoonFilledIcon size={16} />}
-        endContent={<SunFilledIcon size={16} />}
         aria-label="Toggle theme"
         classNames={{
           base: "max-w-fit",
           wrapper: "p-0 h-4 overflow-visible",
           thumb: "w-6 h-6 border-2 shadow-lg",
         }}
+        color="primary"
+        endContent={<SunFilledIcon size={16} />}
+        isSelected={theme === "light"}
+        size="sm"
+        startContent={<MoonFilledIcon size={16} />}
+        onValueChange={handleThemeChange}
       />
-      
+
       <div className="flex items-center text-sm text-gray-500">
         <SunFilledIcon size={16} />
       </div>
