@@ -25,14 +25,51 @@ const FeedControl = () => {
   const [weightBeforeFeed, setWeightBeforeFeed] = useState(0);
   const [lastFeedTime, setLastFeedTime] = useState<string | null>(null);
 
+  // Device timing controls
+  const [actuatorUp, setActuatorUp] = useState("3");
+  const [actuatorDown, setActuatorDown] = useState("2");
+  const [augerOn, setAugerOn] = useState("20");
+  const [blowerOn, setBlowerOn] = useState("15");
+
   // Automatic feeding
   const [automaticFeeding, setAutomaticFeeding] = useState(false);
   const [newScheduleTime, setNewScheduleTime] = useState("");
   const [newScheduleAmount, setNewScheduleAmount] = useState("100");
+  
+  // New schedule timing controls
+  const [newActuatorUp, setNewActuatorUp] = useState("3");
+  const [newActuatorDown, setNewActuatorDown] = useState("2");
+  const [newAugerOn, setNewAugerOn] = useState("20");
+  const [newBlowerOn, setNewBlowerOn] = useState("15");
+  
   const [schedules, setSchedules] = useState([
-    { time: "08:00", amount: "100", type: "breakfast" },
-    { time: "12:00", amount: "150", type: "lunch" },
-    { time: "18:00", amount: "100", type: "dinner" },
+    { 
+      time: "08:00", 
+      amount: "100", 
+      type: "breakfast",
+      actuator_up: 3,
+      actuator_down: 2,
+      auger_on: 20,
+      blower_on: 15
+    },
+    { 
+      time: "12:00", 
+      amount: "150", 
+      type: "lunch",
+      actuator_up: 3,
+      actuator_down: 2,
+      auger_on: 25,
+      blower_on: 18
+    },
+    { 
+      time: "18:00", 
+      amount: "100", 
+      type: "dinner",
+      actuator_up: 3,
+      actuator_down: 2,
+      auger_on: 20,
+      blower_on: 15
+    },
   ]);
 
   // Feed history and statistics
@@ -140,10 +177,14 @@ const FeedControl = () => {
       // Take photo first
       await apiClient.takePhoto();
 
-      // Execute feeding command
+      // Execute feeding command with timing controls
       const feedRequest: FeedControlRequest = {
         action: feedType as any,
         ...(feedType === "custom" && { amount: parseInt(feedAmount) }),
+        actuator_up: parseInt(actuatorUp),
+        actuator_down: parseInt(actuatorDown),
+        auger_on: parseInt(augerOn),
+        blower_on: parseInt(blowerOn),
       };
 
       const success = await apiClient.feedFish(feedRequest);
@@ -174,11 +215,19 @@ const FeedControl = () => {
         time: newScheduleTime,
         amount: newScheduleAmount,
         type: "custom",
+        actuator_up: parseInt(newActuatorUp),
+        actuator_down: parseInt(newActuatorDown),
+        auger_on: parseInt(newAugerOn),
+        blower_on: parseInt(newBlowerOn),
       };
 
       setSchedules([...schedules, newSchedule]);
       setNewScheduleTime("");
       setNewScheduleAmount("100");
+      setNewActuatorUp("3");
+      setNewActuatorDown("2");
+      setNewAugerOn("20");
+      setNewBlowerOn("15");
     }
   };
 
@@ -313,17 +362,90 @@ const FeedControl = () => {
             )}
           </div>
 
+          {/* Device Timing Controls */}
+          <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 mb-6 border border-orange-200 dark:border-orange-700">
+            <h3 className="text-lg font-medium text-orange-700 dark:text-orange-300 mb-4">
+              ⏱️ Device Timing Controls
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Actuator Up (s)
+                </label>
+                <Input
+                  type="number"
+                  size="sm"
+                  min="1"
+                  max="30"
+                  value={actuatorUp}
+                  onChange={(e) => setActuatorUp(e.target.value)}
+                  placeholder="3"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Actuator Down (s)
+                </label>
+                <Input
+                  type="number"
+                  size="sm"
+                  min="1"
+                  max="30"
+                  value={actuatorDown}
+                  onChange={(e) => setActuatorDown(e.target.value)}
+                  placeholder="2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Auger On (s)
+                </label>
+                <Input
+                  type="number"
+                  size="sm"
+                  min="1"
+                  max="60"
+                  value={augerOn}
+                  onChange={(e) => setAugerOn(e.target.value)}
+                  placeholder="20"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Blower On (s)
+                </label>
+                <Input
+                  type="number"
+                  size="sm"
+                  min="1"
+                  max="60"
+                  value={blowerOn}
+                  onChange={(e) => setBlowerOn(e.target.value)}
+                  placeholder="15"
+                />
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-orange-600 dark:text-orange-400">
+              💡 Configure device operation timing for precise feeding control
+            </div>
+          </div>
+
           {/* Feed Button */}
-          <Button
-            className="w-full h-12 text-lg font-medium"
-            color="primary"
-            isLoading={loading}
-            size="lg"
-            startContent={<FaPlay />}
-            onPress={handleFeedNow}
-          >
-            Feed Now ({feedAmount}g)
-          </Button>
+          <div className="space-y-2">
+            <Button
+              className="w-full h-12 text-lg font-medium"
+              color="primary"
+              isLoading={loading}
+              size="lg"
+              startContent={<FaPlay />}
+              onPress={handleFeedNow}
+            >
+              Feed Now ({feedAmount}g)
+            </Button>
+            <div className="text-xs text-gray-500 dark:text-gray-400 text-center p-2 bg-gray-100 dark:bg-gray-700 rounded">
+              ⚙️ actuator {actuatorUp}s↑ / {actuatorDown}s↓, auger {augerOn}s, blower {blowerOn}s
+            </div>
+          </div>
 
           {/* Take Photo Button */}
           <Button
@@ -355,67 +477,137 @@ const FeedControl = () => {
             {schedules.map((schedule, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
               >
-                <div>
-                  <div className="font-medium text-gray-900 dark:text-gray-100">
-                    {schedule.time}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-medium text-gray-900 dark:text-gray-100 text-lg">
+                    ⏰ {schedule.time}
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {schedule.amount}g • {schedule.type}
-                  </div>
+                  <Button
+                    isIconOnly
+                    color="danger"
+                    size="sm"
+                    variant="light"
+                    onPress={() => handleRemoveSchedule(index)}
+                  >
+                    <BsTrash />
+                  </Button>
                 </div>
-                <Button
-                  isIconOnly
-                  color="danger"
-                  size="sm"
-                  variant="light"
-                  onPress={() => handleRemoveSchedule(index)}
-                >
-                  <BsTrash />
-                </Button>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  🍚 {schedule.amount}g • {schedule.type}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 rounded p-2">
+                  ⚙️ actuator {schedule.actuator_up}s↑ / {schedule.actuator_down}s↓, auger {schedule.auger_on}s, blower {schedule.blower_on}s
+                </div>
               </div>
             ))}
           </div>
 
           {/* Add New Schedule */}
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Time
-                </label>
-                <Input
-                  size="sm"
-                  type="time"
-                  value={newScheduleTime}
-                  onChange={(e) => setNewScheduleTime(e.target.value)}
-                />
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-700">
+            <h3 className="text-lg font-medium text-green-700 dark:text-green-300 mb-4">
+              ➕ Add New Schedule
+            </h3>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Time
+                  </label>
+                  <Input
+                    size="sm"
+                    type="time"
+                    value={newScheduleTime}
+                    onChange={(e) => setNewScheduleTime(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Amount (g)
+                  </label>
+                  <Input
+                    max="500"
+                    min="10"
+                    placeholder="100"
+                    size="sm"
+                    type="number"
+                    value={newScheduleAmount}
+                    onChange={(e) => setNewScheduleAmount(e.target.value)}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Amount (g)
-                </label>
-                <Input
-                  max="500"
-                  min="10"
-                  placeholder="100"
-                  size="sm"
-                  type="number"
-                  value={newScheduleAmount}
-                  onChange={(e) => setNewScheduleAmount(e.target.value)}
-                />
+              
+              {/* Timing Controls for New Schedule */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Actuator Up (s)
+                  </label>
+                  <Input
+                    type="number"
+                    size="sm"
+                    min="1"
+                    max="30"
+                    value={newActuatorUp}
+                    onChange={(e) => setNewActuatorUp(e.target.value)}
+                    placeholder="3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Actuator Down (s)
+                  </label>
+                  <Input
+                    type="number"
+                    size="sm"
+                    min="1"
+                    max="30"
+                    value={newActuatorDown}
+                    onChange={(e) => setNewActuatorDown(e.target.value)}
+                    placeholder="2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Auger On (s)
+                  </label>
+                  <Input
+                    type="number"
+                    size="sm"
+                    min="1"
+                    max="60"
+                    value={newAugerOn}
+                    onChange={(e) => setNewAugerOn(e.target.value)}
+                    placeholder="20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Blower On (s)
+                  </label>
+                  <Input
+                    type="number"
+                    size="sm"
+                    min="1"
+                    max="60"
+                    value={newBlowerOn}
+                    onChange={(e) => setNewBlowerOn(e.target.value)}
+                    placeholder="15"
+                  />
+                </div>
               </div>
+              
+              <Button
+                className="w-full"
+                color="success"
+                size="sm"
+                startContent={<BsPlus />}
+                onPress={handleAddSchedule}
+                isDisabled={!newScheduleTime || !newScheduleAmount}
+              >
+                Add Schedule
+              </Button>
             </div>
-            <Button
-              className="w-full"
-              color="success"
-              size="sm"
-              startContent={<BsPlus />}
-              onPress={handleAddSchedule}
-            >
-              Add Schedule
-            </Button>
           </div>
         </div>
 

@@ -289,6 +289,10 @@ export interface FeedControlRequest {
   amount?: number; // Feed amount in grams
   speed?: number; // Motor speed 0-255
   duration?: number; // Duration in milliseconds
+  actuator_up?: number; // Actuator up time in seconds
+  actuator_down?: number; // Actuator down time in seconds
+  auger_on?: number; // Auger motor on time in seconds
+  blower_on?: number; // Blower fan on time in seconds
 }
 
 // Ultra Fast Relay Control
